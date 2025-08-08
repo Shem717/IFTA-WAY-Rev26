@@ -1,0 +1,6 @@
+{
+  "name": "Development - IFTA WAY - Mileage & Fuel Management",
+  "description": "A comprehensive application for truck drivers and fleet managers to track mileage, log fuel purchases, and generate reports for IFTA compliance. Features include a dashboard with key metrics, detailed entry logging with receipt uploads, and insightful analytics.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Sora', sans-serif;
+  padding-bottom: 80px; /* Adjust based on nav height */
+}
+
+/* Custom scrollbar for dark theme */
+html.dark ::-webkit-scrollbar { width: 8px; }
+html.dark ::-webkit-scrollbar-track { background: #1C1F2D; }
+html.dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* Custom scrollbar for light theme */
+html.light ::-webkit-scrollbar { width: 8px; }
+html.light ::-webkit-scrollbar-track { background: #F7F8FA; }
+html.light ::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
+html.light ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+.recharts-responsive-container {
+  min-height: 250px;
+}
+
+/* Animations for Action Sheet */
+@keyframes fade-in-fast {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up-fast {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out forwards; }
+.animate-slide-up-fast { animation: slide-up-fast 0.2s ease-out forwards; }
