@@ -37,7 +37,7 @@ export const FileUpload: FC<FileUploadProps> = ({ onFileSelect, receiptFile, rec
         handleFileChange(e.dataTransfer.files);
     };
     
-    const isPdf = receiptFile?.type === 'application/pdf' || (receiptPreview && receiptPreview.toLowerCase().includes('.pdf'));
+    const isPdf = (receiptFile?.type === 'application/pdf') || (!!receiptPreview && /\.pdf($|\?)/i.test(receiptPreview));
 
     return (
         <div className="text-center">
@@ -46,10 +46,12 @@ export const FileUpload: FC<FileUploadProps> = ({ onFileSelect, receiptFile, rec
             {receiptPreview ? (
                 <div className="relative group">
                     {isPdf ? (
-                        <div className="h-48 w-full rounded-lg bg-light-bg dark:bg-dark-bg border-2 border-dashed border-light-border dark:border-dark-border flex flex-col items-center justify-center text-light-text-secondary dark:text-dark-text-secondary">
-                           <i className="fas fa-file-pdf text-5xl text-red-500"></i>
-                           <p className="mt-2 font-semibold">PDF Receipt Uploaded</p>
-                           <a href={receiptPreview} target="_blank" rel="noopener noreferrer" className="text-sm text-light-accent dark:text-dark-accent hover:underline mt-1">View PDF</a>
+                        <div className="h-64 w-full rounded-lg bg-light-bg dark:bg-dark-bg border-2 border-dashed border-light-border dark:border-dark-border overflow-hidden">
+                            <iframe src={receiptPreview} title="PDF Receipt Preview" className="w-full h-full" />
+                            <div className="absolute bottom-2 right-2 flex gap-2">
+                                <a href={receiptPreview} target="_blank" rel="noopener noreferrer" className="text-white bg-slate-800/80 px-3 py-1 rounded-lg hover:bg-slate-700/80"><i className="fas fa-external-link-alt mr-2"></i>Open</a>
+                                <button type="button" onClick={clearFile} className="text-white bg-red-600/80 px-3 py-1 rounded-lg hover:bg-red-500/80"><i className="fas fa-trash mr-2"></i>Remove</button>
+                            </div>
                         </div>
                     ) : (
                         <div className="relative">
@@ -64,10 +66,12 @@ export const FileUpload: FC<FileUploadProps> = ({ onFileSelect, receiptFile, rec
                             </button>
                         </div>
                     )}
-                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="text-white bg-slate-800/80 px-4 py-2 rounded-lg hover:bg-slate-700/80 mx-1"><i className="fas fa-exchange-alt mr-2"></i>Change</button>
-                        <button type="button" onClick={clearFile} className="text-white bg-red-600/80 px-4 py-2 rounded-lg hover:bg-red-500/80 mx-1"><i className="fas fa-trash mr-2"></i>Remove</button>
-                    </div>
+                    {!isPdf && (
+                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="text-white bg-slate-800/80 px-4 py-2 rounded-lg hover:bg-slate-700/80 mx-1"><i className="fas fa-exchange-alt mr-2"></i>Change</button>
+                            <button type="button" onClick={clearFile} className="text-white bg-red-600/80 px-4 py-2 rounded-lg hover:bg-red-500/80 mx-1"><i className="fas fa-trash mr-2"></i>Remove</button>
+                        </div>
+                    )}
                     {isScanning && (
                          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center rounded-lg">
                             <Spinner className="w-8 h-8"/>

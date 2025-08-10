@@ -115,93 +115,113 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
         }
 
         if (file) {
-            const objectUrl = URL.createObjectURL(file);
-            setPreviewObjectURL(objectUrl);
-            setReceiptPreview(objectUrl);
-
-            setIsScanning(true);
             try {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onloadend = async () => {
+                let workingFile: File = file;
+                // Convert HEIC/HEIF to JPEG for preview and OCR compatibility
+                if (/(image\/heic|image\/heif)/i.test(file.type)) {
                     try {
-                        const base64String = (reader.result as string).split(',')[1];
-                        const mimeType = file.type;
-                        const data = await apiService.scanReceipt(base64String, mimeType);
-                        
-                        const parsedOdometer = data.odometer;
-                        if (parsedOdometer) setOdometer(parsedOdometer.toString());
+                        const heic2any = (await import('heic2any')).default as any;
+                        const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 });
+                        const convertedBlob: Blob = Array.isArray(converted) ? converted[0] : converted;
+                        const newName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+                        workingFile = new File([convertedBlob], newName, { type: 'image/jpeg' });
+                    } catch (convErr) {
+                        console.warn('HEIC conversion failed, proceeding with original file:', convErr);
+                    }
+                }
 
-                        // Map structured dual-fuel output if present
-                        const dieselGallons = data.dieselGallons;
-                        const dieselCost = data.dieselCost;
-                        const defGallons = data.defGallons;
-                        const defCost = data.defCost;
+                const objectUrl = URL.createObjectURL(workingFile);
+                setPreviewObjectURL(objectUrl);
+                setReceiptPreview(objectUrl);
+                setReceiptFile(workingFile);
 
-                        if (dieselGallons || dieselCost || defGallons || defCost) {
-                            if (dieselGallons) setFuelType('diesel');
-                            if (dieselGallons) setAmount(String(dieselGallons));
-                            if (dieselCost) setCost(String(dieselCost));
-                            if (dieselGallons && dieselCost) setPricePerGallon((Number(dieselCost) / Number(dieselGallons)).toFixed(4));
+                setIsScanning(true);
+                try {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(workingFile);
+                    reader.onloadend = async () => {
+                        try {
+                            const base64String = (reader.result as string).split(',')[1];
+                            const mimeType = workingFile.type || file.type;
+                            const data = await apiService.scanReceipt(base64String, mimeType);
+                            
+                            const parsedOdometer = data.odometer;
+                            if (parsedOdometer) setOdometer(parsedOdometer.toString());
 
-                            if (defGallons || defCost) {
-                                setIncludeSecondFuel(true);
-                                setSecondAmount(defGallons ? String(defGallons) : '');
-                                setSecondCost(defCost ? String(defCost) : '');
-                                if (defGallons && defCost) setSecondPricePerGallon((Number(defCost) / Number(defGallons)).toFixed(4));
-                            }
-                        } else {
-                            // Backward compatibility
-                            const parsedCost = data.cost;
-                            const parsedAmount = data.amount;
-                            if (parsedCost) setCost(parsedCost.toString());
-                            if (parsedAmount) setAmount(parsedAmount.toString());
-                            if (parsedCost && parsedAmount && parsedAmount > 0) {
-                                setPricePerGallon((parsedCost / parsedAmount).toFixed(4));
-                            }
-                            if (data.fuelType) {
-                                const ft = String(data.fuelType).toLowerCase();
-                                if(ft.includes('diesel')) setFuelType('diesel');
-                                else if(ft.includes('def')) setFuelType('def');
-                                else {
-                                    setFuelType('custom');
-                                    setCustomFuelType(data.fuelType);
+                            // Map structured dual-fuel output if present
+                            const dieselGallons = data.dieselGallons;
+                            const dieselCost = data.dieselCost;
+                            const defGallons = data.defGallons;
+                            const defCost = data.defCost;
+
+                            if (dieselGallons || dieselCost || defGallons || defCost) {
+                                if (dieselGallons) setFuelType('diesel');
+                                if (dieselGallons) setAmount(String(dieselGallons));
+                                if (dieselCost) setCost(String(dieselCost));
+                                if (dieselGallons && dieselCost) setPricePerGallon((Number(dieselCost) / Number(dieselGallons)).toFixed(4));
+
+                                if (defGallons || defCost) {
+                                    setIncludeSecondFuel(true);
+                                    setSecondAmount(defGallons ? String(defGallons) : '');
+                                    setSecondCost(defCost ? String(defCost) : '');
+                                    if (defGallons && defCost) setSecondPricePerGallon((Number(defCost) / Number(defGallons)).toFixed(4));
+                                }
+                            } else {
+                                // Backward compatibility
+                                const parsedCost = data.cost;
+                                const parsedAmount = data.amount;
+                                if (parsedCost) setCost(parsedCost.toString());
+                                if (parsedAmount) setAmount(parsedAmount.toString());
+                                if (parsedCost && parsedAmount && parsedAmount > 0) {
+                                    setPricePerGallon((parsedCost / parsedAmount).toFixed(4));
+                                }
+                                if (data.fuelType) {
+                                    const ft = String(data.fuelType).toLowerCase();
+                                    if(ft.includes('diesel')) setFuelType('diesel');
+                                    else if(ft.includes('def')) setFuelType('def');
+                                    else {
+                                        setFuelType('custom');
+                                        setCustomFuelType(data.fuelType);
+                                    }
                                 }
                             }
-                        }
 
-                        if (data.city) setCity(data.city);
-                        if (data.state) setState(String(data.state).toUpperCase());
-                        
-                        // Handle date and time
-                        if (data.date) {
-                            let dateTimeString = data.date;
-                            if (data.time) {
-                                dateTimeString += 'T' + data.time;
-                            } else {
-                                dateTimeString += 'T12:00:00';
+                            if (data.city) setCity(data.city);
+                            if (data.state) setState(String(data.state).toUpperCase());
+                            
+                            // Handle date and time
+                            if (data.date) {
+                                let dateTimeString = data.date;
+                                if (data.time) {
+                                    dateTimeString += 'T' + data.time;
+                                } else {
+                                    dateTimeString += 'T12:00:00';
+                                }
+                                const parsedDate = new Date(dateTimeString + 'Z');
+                                if (!isNaN(parsedDate.getTime())) {
+                                   const localDate = new Date(parsedDate.getTime() + parsedDate.getTimezoneOffset() * 60000);
+                                   setDateTime(localDate.toISOString().slice(0,16));
+                                }
                             }
-                            const parsedDate = new Date(dateTimeString + 'Z');
-                            if (!isNaN(parsedDate.getTime())) {
-                               const localDate = new Date(parsedDate.getTime() + parsedDate.getTimezoneOffset() * 60000);
-                               setDateTime(localDate.toISOString().slice(0,16));
-                            }
+                            
+                            showToast("Receipt auto-filled!", "success");
+                        } catch (e: any) {
+                             console.error("Scan failed:", e);
+                             const errorMessage = e.message || 'Unknown error occurred';
+                             setScanError(`Scan failed: ${errorMessage}. Please enter manually.`);
+                             showToast("Receipt scanning failed. Please enter details manually.", "error");
+                        } finally {
+                            setIsScanning(false);
                         }
-                        
-                        showToast("Receipt auto-filled!", "success");
-                    } catch (e: any) {
-                         console.error("Scan failed:", e);
-                         const errorMessage = e.message || 'Unknown error occurred';
-                         setScanError(`Scan failed: ${errorMessage}. Please enter manually.`);
-                         showToast("Receipt scanning failed. Please enter details manually.", "error");
-                    } finally {
-                        setIsScanning(false);
-                    }
-                };
-            } catch (error: any) {
-                 console.error("File Read failed:", error);
-                 setScanError(`Failed to read file. Please try again.`);
-                 setIsScanning(false);
+                    };
+                } catch (error: any) {
+                    console.error("File Read failed:", error);
+                    setScanError(`Failed to read file. Please try again.`);
+                    setIsScanning(false);
+                }
+            } catch (outerErr: any) {
+                console.error('File processing failed:', outerErr);
+                setScanError('Could not process the selected file.');
             }
         } else {
              if (!entryToEdit?.receiptUrl) {
