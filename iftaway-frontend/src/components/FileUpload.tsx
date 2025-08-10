@@ -41,7 +41,7 @@ export const FileUpload: FC<FileUploadProps> = ({ onFileSelect, receiptFile, rec
 
     return (
         <div className="text-center">
-            <input type="file" ref={fileInputRef} onChange={e => handleFileChange(e.target.files)} accept="image/png,image/jpeg,application/pdf" className="hidden" />
+            <input type="file" ref={fileInputRef} onChange={e => handleFileChange(e.target.files)} accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden" />
             
             {receiptPreview ? (
                 <div className="relative group">
@@ -83,7 +83,7 @@ export const FileUpload: FC<FileUploadProps> = ({ onFileSelect, receiptFile, rec
                 >
                     <i className="fas fa-cloud-upload-alt text-4xl text-light-text-secondary dark:text-dark-text-secondary"></i>
                     <p className="mt-3 font-semibold text-light-text dark:text-dark-text">Click to upload or drag and drop</p>
-                    <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">PNG, JPG, or PDF (MAX. 10MB)</p>
+                    <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">PNG, JPG, WebP, or PDF (MAX. 10MB)</p>
                 </div>
             )}
              {scanError && <p className="text-red-500 text-sm mt-2 text-center">{scanError}</p>}
