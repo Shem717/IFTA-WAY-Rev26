@@ -10,7 +10,7 @@ import { Autocomplete } from '../components/ui/Autocomplete';
 import { Spinner } from '../components/ui/Spinner';
 import { FileUpload } from '../components/FileUpload';
 
-interface User { id: number; email: string; }
+interface User { id: string; email: string; }
 
 interface FuelEntryFormProps {
     trucks: Truck[];
@@ -32,6 +32,12 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
     const [amount, setAmount] = useState('');
     const [cost, setCost] = useState('');
     const [pricePerGallon, setPricePerGallon] = useState('');
+    // Optional second fuel for same stop (opposite of selected fuel type)
+    const [includeSecondFuel, setIncludeSecondFuel] = useState(false);
+    const [secondAmount, setSecondAmount] = useState('');
+    const [secondCost, setSecondCost] = useState('');
+    const [secondPricePerGallon, setSecondPricePerGallon] = useState('');
+
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
     const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
     const [previewObjectURL, setPreviewObjectURL] = useState<string | null>(null);
@@ -51,6 +57,10 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
         setAmount('');
         setCost('');
         setPricePerGallon('');
+        setIncludeSecondFuel(false);
+        setSecondAmount('');
+        setSecondCost('');
+        setSecondPricePerGallon('');
         setReceiptFile(null);
         setReceiptPreview(null);
         setScanError(null);
@@ -80,6 +90,11 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
             if (entryToEdit.receiptUrl) {
                 setReceiptPreview(entryToEdit.receiptUrl);
             }
+            // When editing an existing single entry, reset second fuel
+            setIncludeSecondFuel(false);
+            setSecondAmount('');
+            setSecondCost('');
+            setSecondPricePerGallon('');
         } else {
             clearForm();
         }
@@ -114,20 +129,49 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
                         const mimeType = file.type;
                         const data = await apiService.scanReceipt(base64String, mimeType);
                         
-                        const parsedCost = data.cost;
-                        const parsedAmount = data.amount;
                         const parsedOdometer = data.odometer;
-
-                        if (parsedCost) setCost(parsedCost.toString());
-                        if (parsedAmount) setAmount(parsedAmount.toString());
                         if (parsedOdometer) setOdometer(parsedOdometer.toString());
 
-                        if (parsedCost && parsedAmount && parsedAmount > 0) {
-                            setPricePerGallon((parsedCost / parsedAmount).toFixed(4));
+                        // Map structured dual-fuel output if present
+                        const dieselGallons = data.dieselGallons;
+                        const dieselCost = data.dieselCost;
+                        const defGallons = data.defGallons;
+                        const defCost = data.defCost;
+
+                        if (dieselGallons || dieselCost || defGallons || defCost) {
+                            if (dieselGallons) setFuelType('diesel');
+                            if (dieselGallons) setAmount(String(dieselGallons));
+                            if (dieselCost) setCost(String(dieselCost));
+                            if (dieselGallons && dieselCost) setPricePerGallon((Number(dieselCost) / Number(dieselGallons)).toFixed(4));
+
+                            if (defGallons || defCost) {
+                                setIncludeSecondFuel(true);
+                                setSecondAmount(defGallons ? String(defGallons) : '');
+                                setSecondCost(defCost ? String(defCost) : '');
+                                if (defGallons && defCost) setSecondPricePerGallon((Number(defCost) / Number(defGallons)).toFixed(4));
+                            }
+                        } else {
+                            // Backward compatibility
+                            const parsedCost = data.cost;
+                            const parsedAmount = data.amount;
+                            if (parsedCost) setCost(parsedCost.toString());
+                            if (parsedAmount) setAmount(parsedAmount.toString());
+                            if (parsedCost && parsedAmount && parsedAmount > 0) {
+                                setPricePerGallon((parsedCost / parsedAmount).toFixed(4));
+                            }
+                            if (data.fuelType) {
+                                const ft = String(data.fuelType).toLowerCase();
+                                if(ft.includes('diesel')) setFuelType('diesel');
+                                else if(ft.includes('def')) setFuelType('def');
+                                else {
+                                    setFuelType('custom');
+                                    setCustomFuelType(data.fuelType);
+                                }
+                            }
                         }
 
                         if (data.city) setCity(data.city);
-                        if (data.state) setState(data.state.toUpperCase());
+                        if (data.state) setState(String(data.state).toUpperCase());
                         
                         // Handle date and time
                         if (data.date) {
@@ -143,15 +187,7 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
                                setDateTime(localDate.toISOString().slice(0,16));
                             }
                         }
-                        if (data.fuelType) {
-                            const ft = data.fuelType.toLowerCase();
-                            if(ft.includes('diesel')) setFuelType('diesel');
-                            else if(ft.includes('def')) setFuelType('def');
-                            else {
-                                setFuelType('custom');
-                                setCustomFuelType(data.fuelType);
-                            }
-                        }
+                        
                         showToast("Receipt auto-filled!", "success");
                     } catch (e: any) {
                          console.error("Scan failed:", e);
@@ -205,6 +241,38 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
             setPricePerGallon('');
         }
     };
+
+    const handleSecondAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newAmount = e.target.value;
+        setSecondAmount(newAmount);
+        const numAmount = parseFloat(newAmount);
+        const numPrice = parseFloat(secondPricePerGallon);
+        if (!isNaN(numAmount) && !isNaN(numPrice) && numAmount >= 0 && numPrice >= 0) {
+            setSecondCost((numAmount * numPrice).toFixed(2));
+        }
+    };
+
+    const handleSecondPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newPrice = e.target.value;
+        setSecondPricePerGallon(newPrice);
+        const numAmount = parseFloat(secondAmount);
+        const numPrice = parseFloat(newPrice);
+        if (!isNaN(numAmount) && !isNaN(numPrice) && numAmount >= 0 && numPrice >= 0) {
+            setSecondCost((numAmount * numPrice).toFixed(2));
+        }
+    };
+
+    const handleSecondCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newCost = e.target.value;
+        setSecondCost(newCost);
+        const numAmount = parseFloat(secondAmount);
+        const numCost = parseFloat(newCost);
+        if (!isNaN(numAmount) && !isNaN(numCost) && numAmount > 0) {
+            setSecondPricePerGallon((numCost / numAmount).toFixed(4));
+        } else if (numAmount <= 0 && numCost > 0) {
+            setSecondPricePerGallon('');
+        }
+    };
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -213,34 +281,24 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
         let receiptUrl = entryToEdit?.receiptUrl || '';
         try {
             if (receiptFile) {
+                setIsUploading(true);
                 const { auth } = getFirebase();
                 const uid = auth.currentUser?.uid;
                 if (!uid) throw new Error('Not authenticated');
                 receiptUrl = await uploadReceipt(uid, receiptFile);
             }
         } catch (e) {
-            // If upload fails, continue without receipt to avoid blocking data entry
             console.error('Receipt upload failed:', e);
+        } finally {
+            setIsUploading(false);
         }
 
         try {
-            // Ensure numeric values are properly parsed
             const odometerValue = parseFloat(odometer);
             const amountValue = parseFloat(amount);
             const costValue = parseFloat(cost);
-            
-            console.log('Saving entry data:', {
-                truckNumber,
-                dateTime,
-                odometer: odometerValue,
-                city,
-                state,
-                fuelType,
-                amount: amountValue,
-                cost: costValue
-            });
-            
-            const entryData = {
+
+            const primaryEntry = {
                 truckNumber,
                 dateTime,
                 odometer: odometerValue || 0,
@@ -253,21 +311,54 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
                 receiptUrl,
                 isIgnored: entryToEdit?.isIgnored || false,
             };
-            
+
+            const entriesToSave: Array<{ id?: string; data: any; isUpdate?: boolean }> = [];
             if (entryToEdit) {
-                await apiService.updateEntry(entryToEdit.id, entryData);
-                showToast("Entry updated successfully!", "success");
+                entriesToSave.push({ id: entryToEdit.id, data: primaryEntry, isUpdate: true });
             } else {
-                await apiService.addEntry(entryData);
-                showToast("Entry saved successfully!", "success");
+                entriesToSave.push({ data: primaryEntry });
             }
+
+            // Optional second fuel entry (opposite type)
+            if (includeSecondFuel) {
+                const otherType: 'diesel' | 'def' = fuelType === 'diesel' ? 'def' : 'diesel';
+                const secondAmountValue = parseFloat(secondAmount);
+                const secondCostValue = parseFloat(secondCost);
+                if (!isNaN(secondAmountValue) && !isNaN(secondCostValue) && (secondAmountValue > 0 || secondCostValue > 0)) {
+                    const secondEntry = {
+                        truckNumber,
+                        dateTime,
+                        odometer: odometerValue || 0,
+                        city,
+                        state,
+                        fuelType: otherType,
+                        customFuelType: '',
+                        amount: secondAmountValue || 0,
+                        cost: secondCostValue || 0,
+                        receiptUrl,
+                        isIgnored: false,
+                    };
+                    // Always create a new entry for the second fuel
+                    entriesToSave.push({ data: secondEntry });
+                }
+            }
+
+            for (const item of entriesToSave) {
+                if (item.isUpdate && item.id) {
+                    await apiService.updateEntry(item.id, item.data);
+                } else {
+                    await apiService.addEntry(item.data);
+                }
+            }
+
+            showToast(entriesToSave.length > 1 ? 'Entries saved successfully!' : 'Entry saved successfully!', 'success');
 
             setSaveState('success');
             setTimeout(() => {
                 clearForm();
                 onSave();
                 setSaveState('idle');
-            }, 1500);
+            }, 1200);
 
         } catch (error: any) {
             setSaveState('error');
@@ -306,6 +397,8 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
                 return 'bg-light-accent dark:bg-dark-accent hover:opacity-90';
         }
     };
+
+    const secondFuelLabel = fuelType === 'diesel' ? 'DEF' : 'Diesel';
 
     return (
         <FormCard title={<><i className={`fas ${entryToEdit ? 'fa-edit' : 'fa-plus'} text-light-accent dark:text-dark-accent`}></i> {entryToEdit ? 'Edit Fuel Entry' : 'Add Fuel Entry'}</>}>
@@ -365,7 +458,7 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
                 </div>
 
                 <div>
-                    <label className={labelStyle}>Fuel Type</label>
+                    <label className={labelStyle}>Primary Fuel Type</label>
                     <div className="mt-2 grid grid-cols-3 gap-2 rounded-lg bg-light-bg dark:bg-dark-bg p-1">
                         {(['diesel', 'def', 'custom'] as const).map(type => (
                             <button type="button" key={type} onClick={() => setFuelType(type)} className={`px-3 py-2 text-sm font-semibold rounded-md transition-colors capitalize ${fuelType === type ? 'bg-light-accent dark:bg-dark-accent text-white shadow' : 'hover:bg-slate-200/50 dark:hover:bg-slate-700/50'}`}>{type}</button>
@@ -391,9 +484,34 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
                     </div>
                 </div>
 
+                <div className="pt-2">
+                    <label className={labelStyle}>Add {secondFuelLabel} for this stop?</label>
+                    <div className="mt-2 flex items-center gap-3">
+                        <input id="includeSecondFuel" type="checkbox" checked={includeSecondFuel} onChange={e => setIncludeSecondFuel(e.target.checked)} />
+                        <label htmlFor="includeSecondFuel" className="text-sm">Include {secondFuelLabel} line item</label>
+                    </div>
+                </div>
+
+                {includeSecondFuel && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label className={labelStyle}>{secondFuelLabel} amount (gallons)</label>
+                            <input type="number" step="any" value={secondAmount} onChange={handleSecondAmountChange} placeholder="e.g., 2.5" className={inputStyle} />
+                        </div>
+                        <div>
+                            <label className={labelStyle}>{secondFuelLabel} price per gallon ($)</label>
+                            <input type="number" step="any" value={secondPricePerGallon} onChange={handleSecondPriceChange} placeholder="e.g., 3.299" className={inputStyle} />
+                        </div>
+                        <div>
+                            <label className={labelStyle}>{secondFuelLabel} total cost ($)</label>
+                            <input type="number" step="any" value={secondCost} onChange={handleSecondCostChange} placeholder="e.g., 8.25" className={inputStyle} />
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex justify-between items-center pt-4 border-t border-light-border dark:border-dark-border">
                      <button type="button" onClick={clearForm} className="px-6 py-3 rounded-lg font-semibold text-light-text-secondary dark:text-dark-text-secondary hover:bg-slate-200/50 dark:hover:bg-dark-border/50 transition-colors">Clear</button>
-                    <button type="submit" disabled={saveState !== 'idle' || isScanning} className={`px-8 py-3 rounded-lg font-semibold text-white transition-all flex items-center gap-2 disabled:cursor-not-allowed ${getSaveButtonClass()}`}>
+                    <button type="submit" disabled={saveState !== 'idle' || isScanning || isUploading} className={`px-8 py-3 rounded-lg font-semibold text-white transition-all flex items-center gap-2 disabled:cursor-not-allowed ${getSaveButtonClass()}`}>
                         {renderSaveButtonContent()}
                     </button>
                 </div>

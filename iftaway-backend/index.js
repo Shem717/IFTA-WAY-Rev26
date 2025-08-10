@@ -110,7 +110,12 @@ app.post('/api/scan-receipt', authenticateToken, async (req, res) => {
 
     try {
         const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
-        const prompt = `Analyze this receipt for a fuel purchase. Extract the total cost, total amount in gallons, city, state (2-letter abbreviation), date (YYYY-MM-DD), and the type of fuel (e.g., Diesel, DEF).`;
+        const prompt = `Analyze this fuel receipt image. If both Diesel and DEF purchases are present, extract separate line items for each. Return a concise JSON with:
+- city, state (2-letter), date (YYYY-MM-DD)
+- odometer (number) if present anywhere on the receipt (handwritten or printed)
+- dieselGallons (number) and dieselCost (number) if Diesel present
+- defGallons (number) and defCost (number) if DEF present
+Use numeric values only for costs and gallons without currency symbols.`;
         const imagePart = { inlineData: { data: image, mimeType: mime_type } };
         
         const response = await ai.models.generateContent({
@@ -121,12 +126,14 @@ app.post('/api/scan-receipt', authenticateToken, async (req, res) => {
             responseSchema: {
               type: Type.OBJECT,
               properties: {
-                cost: { type: Type.NUMBER, description: 'Total cost in numbers only' },
-                amount: { type: Type.NUMBER, description: 'Total amount in gallons, numbers only' },
                 city: { type: Type.STRING },
                 state: { type: Type.STRING, description: '2-letter abbreviation' },
                 date: { type: Type.STRING, description: 'YYYY-MM-DD format' },
-                fuelType: { type: Type.STRING, description: 'Type of fuel, e.g., Diesel, DEF' },
+                odometer: { type: Type.NUMBER, description: 'Vehicle odometer if present' },
+                dieselGallons: { type: Type.NUMBER, description: 'Gallons of Diesel' },
+                dieselCost: { type: Type.NUMBER, description: 'Cost of Diesel' },
+                defGallons: { type: Type.NUMBER, description: 'Gallons of DEF' },
+                defCost: { type: Type.NUMBER, description: 'Cost of DEF' },
               }
             }
           }
