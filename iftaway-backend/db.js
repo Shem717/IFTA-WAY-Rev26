@@ -1,12 +1,22 @@
 
-const { Pool } = require('pg');
+const useInMem = process.env.USE_INMEM_DB === 'true';
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
+let pool;
+
+if (useInMem) {
+    // Use pg-mem for an in-memory Postgres compatible database in local/dev
+    const { newDb } = require('pg-mem');
+    const mem = newDb({ autoCreateForeignKeyIndices: true });
+    const pg = mem.adapters.createPg();
+    const { Pool: MemPool } = pg;
+    pool = new MemPool();
+} else {
+    const { Pool } = require('pg');
+    pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+    });
+}
 
 const initDb = async () => {
     try {
@@ -20,7 +30,6 @@ const initDb = async () => {
         `);
         
         // Safely drop the obsolete 'password' column if it exists from a previous schema version.
-        // This is the primary fix for the "violates not-null constraint" error.
         await pool.query('ALTER TABLE users DROP COLUMN IF EXISTS password;');
         
         // Add the correct 'password_hash' column if it doesn't already exist.
@@ -56,7 +65,7 @@ const initDb = async () => {
                 last_edited_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log("Database tables checked/created successfully.");
+        console.log("Database tables checked/created successfully." + (useInMem ? ' (in-memory)' : ''));
     } catch (err) {
         console.error("Error initializing database:", err);
     }
