@@ -26,16 +26,34 @@ export const scanReceipt = onCall({
   }
 
   // Validate mime type
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
   if (!allowedTypes.includes(mimeType)) {
-    throw new HttpsError('invalid-argument', 'Invalid image format. Please use JPEG, PNG, or WebP.');
+    throw new HttpsError('invalid-argument', 'Invalid image format. Please use JPEG, PNG, WebP, or PDF.');
   }
 
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const prompt = `Extract ALL fields from this fuel receipt image. Return ONLY a valid JSON object with these exact keys: cost (number), amount (number), city (string), state (string 2-letter), date (YYYY-MM-DD), time (HH:MM in 24-hour format), fuelType (string), odometer (number). Look for handwritten odometer readings, total cost, gallons, and location. If any field cannot be determined, use null for that field.`;
+    const prompt = `Extract fields from this fuel receipt image. Return ONLY a valid JSON object with these exact keys:
+{
+  "city": string | null,
+  "state": string | null, // 2-letter code
+  "date": string | null,  // YYYY-MM-DD
+  "time": string | null,  // HH:MM 24h if available
+  "fuelType": string | null,
+  "amount": number | null,        // total gallons if only one fuel
+  "cost": number | null,          // total cost if only one fuel
+  "odometer": number | null,      // vehicle miles if present (printed or handwritten). Prefer the number written near the words "miles" or "odometer" if multiple numbers appear.
+  "dieselGallons": number | null, // if Diesel present (line item)
+  "dieselCost": number | null,
+  "defGallons": number | null,    // if DEF present (line item)
+  "defCost": number | null
+}
+Guidance:
+- Many receipts have a handwritten odometer at the top like "594,454 miles". If found, parse the digits (ignore commas and the word miles).
+- If both Diesel and DEF are present, populate the separate diesel/def fields. If only one fuel is present, use the generic amount and cost fields instead.
+- Use numeric values only (no currency symbols). Use null for any field you cannot determine.`;
 
     const result = await model.generateContent([
       { text: prompt },
@@ -49,24 +67,32 @@ export const scanReceipt = onCall({
 
     const text = (await result.response).text();
     
-    // Better JSON extraction
+    // Extract JSON substring
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('No valid JSON found in response');
     }
     
     const json = JSON.parse(jsonMatch[0]);
-    
+
+    // Normalize helpers
+    const toNumber = (v: any) => (typeof v === 'number' ? v : (typeof v === 'string' ? Number(String(v).replace(/[^0-9.\-]/g, '')) : null));
+    const toString = (v: any) => (typeof v === 'string' ? v.trim() : null);
+
     // Validate and sanitize response
     return {
-      cost: typeof json.cost === 'number' ? json.cost : null,
-      amount: typeof json.amount === 'number' ? json.amount : null,
-      city: typeof json.city === 'string' ? json.city.trim() : null,
-      state: typeof json.state === 'string' ? json.state.trim().toUpperCase() : null,
-      date: typeof json.date === 'string' ? json.date : null,
-      time: typeof json.time === 'string' ? json.time : null,
-      fuelType: typeof json.fuelType === 'string' ? json.fuelType.trim() : null,
-      odometer: typeof json.odometer === 'number' ? json.odometer : null
+      cost: toNumber(json.cost),
+      amount: toNumber(json.amount),
+      city: toString(json.city),
+      state: toString(json.state)?.toUpperCase() || null,
+      date: toString(json.date),
+      time: toString(json.time),
+      fuelType: toString(json.fuelType),
+      odometer: toNumber(json.odometer),
+      dieselGallons: toNumber(json.dieselGallons),
+      dieselCost: toNumber(json.dieselCost),
+      defGallons: toNumber(json.defGallons),
+      defCost: toNumber(json.defCost)
     };
     
   } catch (error: any) {
