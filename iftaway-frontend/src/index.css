@@ -7,6 +7,38 @@ body {
   padding-bottom: 80px; /* Adjust based on nav height */
 }
 
+/* Enhanced dark theme styling */
+html.dark {
+  background-color: #0F0F23;
+  color: #FFFFFF;
+}
+
+html.dark body {
+  background-color: #0F0F23;
+  color: #FFFFFF;
+}
+
+/* Dark theme overrides for better contrast */
+html.dark .bg-light-bg {
+  background-color: #1A1B2E;
+}
+
+html.dark .bg-light-card {
+  background-color: #2A2F45;
+}
+
+html.dark .text-light-text {
+  color: #FFFFFF;
+}
+
+html.dark .text-light-text-secondary {
+  color: #94A3B8;
+}
+
+html.dark .border-light-border {
+  border-color: #334155;
+}
+
 /* Custom scrollbar for dark theme */
 html.dark ::-webkit-scrollbar { width: 8px; }
 html.dark ::-webkit-scrollbar-track { background: #1C1F2D; }

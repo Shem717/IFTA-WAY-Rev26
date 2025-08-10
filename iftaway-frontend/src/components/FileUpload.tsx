@@ -52,7 +52,17 @@ export const FileUpload: FC<FileUploadProps> = ({ onFileSelect, receiptFile, rec
                            <a href={receiptPreview} target="_blank" rel="noopener noreferrer" className="text-sm text-light-accent dark:text-dark-accent hover:underline mt-1">View PDF</a>
                         </div>
                     ) : (
-                        <img src={receiptPreview} alt="Receipt Preview" className="h-48 w-full object-contain rounded-lg bg-light-bg dark:bg-dark-bg p-2" />
+                        <div className="relative">
+                            <img src={receiptPreview} alt="Receipt Preview" className="h-48 w-full object-contain rounded-lg bg-light-bg dark:bg-dark-bg p-2" />
+                            <button 
+                                type="button" 
+                                onClick={() => window.open(receiptPreview, '_blank')}
+                                className="absolute top-2 right-2 bg-black/70 text-white p-2 rounded-full hover:bg-black/90 transition-colors"
+                                title="View Full Size"
+                            >
+                                <i className="fas fa-expand-arrows-alt"></i>
+                            </button>
+                        </div>
                     )}
                     <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
                         <button type="button" onClick={() => fileInputRef.current?.click()} className="text-white bg-slate-800/80 px-4 py-2 rounded-lg hover:bg-slate-700/80 mx-1"><i className="fas fa-exchange-alt mr-2"></i>Change</button>

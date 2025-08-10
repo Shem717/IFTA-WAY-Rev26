@@ -1,5 +1,7 @@
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import apiService from '../services/apiService';
+import { getFirebase } from '../lib/firebase';
+import { uploadReceipt } from '../services/storageService';
 import { FuelEntry, Truck, SaveState } from '../types';
 import { statesAndProvinces } from '../utils/constants';
 
@@ -36,6 +38,7 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
     const [saveState, setSaveState] = useState<SaveState>('idle');
     const [isScanning, setIsScanning] = useState(false);
     const [scanError, setScanError] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     const clearForm = useCallback(() => {
         setTruckNumber('');
@@ -113,9 +116,11 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
                         
                         const parsedCost = data.cost;
                         const parsedAmount = data.amount;
+                        const parsedOdometer = data.odometer;
 
                         if (parsedCost) setCost(parsedCost.toString());
                         if (parsedAmount) setAmount(parsedAmount.toString());
+                        if (parsedOdometer) setOdometer(parsedOdometer.toString());
 
                         if (parsedCost && parsedAmount && parsedAmount > 0) {
                             setPricePerGallon((parsedCost / parsedAmount).toFixed(4));
@@ -123,8 +128,16 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
 
                         if (data.city) setCity(data.city);
                         if (data.state) setState(data.state.toUpperCase());
+                        
+                        // Handle date and time
                         if (data.date) {
-                            const parsedDate = new Date(data.date + 'T12:00:00Z');
+                            let dateTimeString = data.date;
+                            if (data.time) {
+                                dateTimeString += 'T' + data.time;
+                            } else {
+                                dateTimeString += 'T12:00:00';
+                            }
+                            const parsedDate = new Date(dateTimeString + 'Z');
                             if (!isNaN(parsedDate.getTime())) {
                                const localDate = new Date(parsedDate.getTime() + parsedDate.getTimezoneOffset() * 60000);
                                setDateTime(localDate.toISOString().slice(0,16));
@@ -142,7 +155,9 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
                         showToast("Receipt auto-filled!", "success");
                     } catch (e: any) {
                          console.error("Scan failed:", e);
-                         setScanError(`Scan failed: ${e.message}. Please enter manually.`);
+                         const errorMessage = e.message || 'Unknown error occurred';
+                         setScanError(`Scan failed: ${errorMessage}. Please enter manually.`);
+                         showToast("Receipt scanning failed. Please enter details manually.", "error");
                     } finally {
                         setIsScanning(false);
                     }
@@ -195,19 +210,46 @@ const FuelEntryForm: FC<FuelEntryFormProps> = ({ trucks, showToast, onSave, entr
         e.preventDefault();
         setSaveState('saving');
         
-        const receiptUrl = entryToEdit?.receiptUrl || '';
+        let receiptUrl = entryToEdit?.receiptUrl || '';
+        try {
+            if (receiptFile) {
+                const { auth } = getFirebase();
+                const uid = auth.currentUser?.uid;
+                if (!uid) throw new Error('Not authenticated');
+                receiptUrl = await uploadReceipt(uid, receiptFile);
+            }
+        } catch (e) {
+            // If upload fails, continue without receipt to avoid blocking data entry
+            console.error('Receipt upload failed:', e);
+        }
 
         try {
+            // Ensure numeric values are properly parsed
+            const odometerValue = parseFloat(odometer);
+            const amountValue = parseFloat(amount);
+            const costValue = parseFloat(cost);
+            
+            console.log('Saving entry data:', {
+                truckNumber,
+                dateTime,
+                odometer: odometerValue,
+                city,
+                state,
+                fuelType,
+                amount: amountValue,
+                cost: costValue
+            });
+            
             const entryData = {
                 truckNumber,
                 dateTime,
-                odometer: parseFloat(odometer) || 0,
+                odometer: odometerValue || 0,
                 city,
                 state,
                 fuelType,
                 customFuelType: fuelType === 'custom' ? customFuelType : '',
-                amount: parseFloat(amount) || 0,
-                cost: parseFloat(cost) || 0,
+                amount: amountValue || 0,
+                cost: costValue || 0,
                 receiptUrl,
                 isIgnored: entryToEdit?.isIgnored || false,
             };

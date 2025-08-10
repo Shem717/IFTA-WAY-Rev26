@@ -12,6 +12,7 @@ const EntriesView: FC<{ onOpenActionSheet: (entry: FuelEntry) => void; showToast
         setIsLoading(true);
         try {
             const allEntries = await apiService.getEntries();
+            console.log('Retrieved entries:', allEntries);
             setEntries(allEntries);
         } catch (error: any) {
             showToast(error.message || "Failed to load entries.", "error");

@@ -135,13 +135,13 @@ const DashboardView: FC<DashboardViewProps> = ({ onOpenActionSheet, showToast, t
                 />
                 <StatCard 
                     title="Expenses This Month"
-                    value={`$${currentMonthStats.expenses.toFixed(2)}`}
+                    value={`$${typeof currentMonthStats.expenses === 'number' ? currentMonthStats.expenses.toFixed(2) : '0.00'}`}
                     trend={renderTrend(currentMonthStats.expenses, prevMonthStats.expenses, 'expenses')}
                     diff={getDifferenceText(currentMonthStats.expenses, prevMonthStats.expenses, 'expenses')}
                 />
                 <StatCard 
                     title="Average MPG This Month"
-                    value={currentMonthStats.mpg.toFixed(1)}
+                    value={typeof currentMonthStats.mpg === 'number' ? currentMonthStats.mpg.toFixed(1) : '0.0'}
                     trend={renderTrend(currentMonthStats.mpg, prevMonthStats.mpg, 'mpg')}
                     diff={getDifferenceText(currentMonthStats.mpg, prevMonthStats.mpg, 'mpg')}
                 />
@@ -173,7 +173,7 @@ const DashboardView: FC<DashboardViewProps> = ({ onOpenActionSheet, showToast, t
                                 borderRadius: '0.5rem',
                                 color: theme === 'dark' ? '#f1f5f9' : '#1e293b'
                             }}
-                            formatter={(value: number) => [`$${value.toFixed(2)}`, 'Cost']}
+                            formatter={(value: number) => [`$${typeof value === 'number' ? value.toFixed(2) : '0.00'}`, 'Cost']}
                             labelFormatter={(label: string) => `Month: ${label}`}
                         />
                         <Area type="monotone" dataKey="cost" stroke={theme === 'dark' ? '#22d3ee' : '#2563eb'} fillOpacity={1} fill="url(#colorCost)" />

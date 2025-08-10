@@ -20,8 +20,8 @@ export const EntryCard: FC<{ entry: FuelEntry, onOpenActionSheet: (entry: FuelEn
             </div>
             <div className="grid grid-cols-3 gap-4 text-center mt-4 border-t border-light-border dark:border-dark-border pt-3">
                 <div><p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Truck</p><p className="font-semibold text-light-text dark:text-dark-text">{entry.truckNumber || 'N/A'}</p></div>
-                <div><p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Total Cost</p><p className="font-semibold text-light-text dark:text-dark-text">${entry.cost.toFixed(2)}</p></div>
-                <div><p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Odometer</p><p className="font-semibold text-light-text dark:text-dark-text">{entry.odometer.toLocaleString()}</p></div>
+                <div><p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Total Cost</p><p className="font-semibold text-light-text dark:text-dark-text">${typeof entry.cost === 'number' ? entry.cost.toFixed(2) : (entry.cost ? parseFloat(entry.cost).toFixed(2) : '0.00')}</p></div>
+                <div><p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">Odometer</p><p className="font-semibold text-light-text dark:text-dark-text">{typeof entry.odometer === 'number' ? entry.odometer.toLocaleString() : (entry.odometer ? parseFloat(entry.odometer).toLocaleString() : '0')}</p></div>
             </div>
         </div>
     );

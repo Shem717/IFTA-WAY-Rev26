@@ -68,8 +68,86 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
         URL.revokeObjectURL(url);
     };
     
-    const handleCsvUploadClick = () => {
-        showToast("Bulk CSV upload is coming soon!", "info");
+    const handleCsvUploadClick = async () => {
+        if (!csvFile) {
+            showToast("Please select a CSV file first.", "error");
+            return;
+        }
+
+        setUploadProgress({ status: 'reading', percentage: 0, message: 'Reading CSV file...' });
+        
+        try {
+            const text = await csvFile.text();
+            const lines = text.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            // Validate headers
+            const requiredHeaders = ['truckNumber', 'dateTime', 'odometer', 'city', 'state', 'fuelType', 'amount', 'cost'];
+            const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+            
+            if (missingHeaders.length > 0) {
+                throw new Error(`Missing required headers: ${missingHeaders.join(', ')}`);
+            }
+
+            setUploadProgress({ status: 'parsing', percentage: 30, message: 'Parsing entries...' });
+            
+            const entries = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim()) {
+                    const values = lines[i].split(',').map(v => v.trim());
+                    const entry = {
+                        truckNumber: values[headers.indexOf('truckNumber')],
+                        dateTime: values[headers.indexOf('dateTime')],
+                        odometer: parseFloat(values[headers.indexOf('odometer')]) || 0,
+                        city: values[headers.indexOf('city')],
+                        state: values[headers.indexOf('state')],
+                        fuelType: values[headers.indexOf('fuelType')] as 'diesel' | 'def' | 'custom',
+                        amount: parseFloat(values[headers.indexOf('amount')]) || 0,
+                        cost: parseFloat(values[headers.indexOf('cost')]) || 0,
+                        isIgnored: false,
+                        isDemo: true
+                    };
+                    entries.push(entry);
+                }
+            }
+
+            setUploadProgress({ status: 'uploading', percentage: 60, message: `Uploading ${entries.length} entries...` });
+            
+            // Upload entries to Firebase
+            let uploaded = 0;
+            for (const entry of entries) {
+                try {
+                    await apiService.addEntry(entry);
+                    uploaded++;
+                    const percentage = 60 + (uploaded / entries.length) * 30;
+                    setUploadProgress({ status: 'uploading', percentage, message: `Uploaded ${uploaded}/${entries.length} entries...` });
+                } catch (error) {
+                    console.error('Failed to upload entry:', error);
+                }
+            }
+
+            setUploadProgress({ status: 'success', percentage: 100, message: `Successfully uploaded ${uploaded} entries!` });
+            showToast(`Successfully uploaded ${uploaded} entries!`, "success");
+            setCsvFile(null);
+            
+            // Trigger refresh
+            setTimeout(() => {
+                setUploadProgress({ status: 'idle', percentage: 0, message: '' });
+            }, 3000);
+            
+        } catch (error: any) {
+            setUploadProgress({ status: 'error', percentage: 0, message: error.message });
+            showToast(error.message || 'Failed to process CSV file.', "error");
+        }
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type === 'text/csv') {
+            setCsvFile(file);
+        } else {
+            showToast("Please select a valid CSV file.", "error");
+        }
     };
 
     const isProcessing = uploadProgress.status === 'reading' || uploadProgress.status === 'parsing' || uploadProgress.status === 'uploading';
@@ -149,11 +227,11 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
                             <i className="fas fa-file-csv mr-2 text-xl text-light-text-secondary dark:text-dark-text-secondary"></i>
                             <span className="text-light-text dark:text-dark-text font-medium">{csvFile ? csvFile.name : 'Choose a .csv file...'}</span>
                         </label>
-                        <input id="csv-upload" type="file" accept=".csv" disabled className="hidden" />
+                        <input id="csv-upload" type="file" accept=".csv" onChange={handleFileSelect} className="hidden" />
                     </div>
                     <button 
                         onClick={handleCsvUploadClick} 
-                        disabled={true || !csvFile || isProcessing}
+                        disabled={!csvFile || isProcessing}
                         className="px-6 py-2 h-12 rounded-lg font-semibold text-white bg-light-accent dark:bg-dark-accent hover:opacity-90 transition flex items-center justify-center gap-2 disabled:bg-slate-400 dark:disabled:bg-slate-600 w-full md:w-56"
                     >
                         {isProcessing ? <Spinner /> : <><i className="fas fa-cloud-upload-alt"></i> Upload & Process</>}

@@ -1,6 +1,7 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { getFunctions, type Functions } from 'firebase/functions';
 import {
   getFirestore,
   initializeFirestore,
@@ -14,6 +15,7 @@ type FirebaseServices = {
   auth: Auth;
   db: Firestore;
   storage: FirebaseStorage;
+  functions: Functions;
 };
 
 let services: FirebaseServices | null = null;
@@ -35,8 +37,9 @@ export function getFirebase(): FirebaseServices {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   });
   const storage = getStorage(app);
+  const functions = getFunctions(app);
 
-  services = { app, auth, db, storage };
+  services = { app, auth, db, storage, functions };
   return services;
 }
 

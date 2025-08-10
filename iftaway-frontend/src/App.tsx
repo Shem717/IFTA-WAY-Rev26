@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Theme } from './types';
 import apiService from './services/apiService';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { onAuthChange } from './services/authService';
 
 import MainApp from './views/MainApp';
@@ -61,24 +62,26 @@ function App() {
 
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center h-screen bg-light-bg dark:bg-dark-bg">
+            <div className="flex justify-center items-center h-screen bg-slate-900">
                 <div className="text-center">
                     <Spinner className="w-12 h-12 mx-auto" />
-                    <p className="mt-4 text-light-text-secondary dark:text-dark-text-secondary">Loading IFTA WAY Command Center...</p>
+                    <p className="mt-4 text-slate-300">Loading IFTA WAY Command Center...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="text-light-text dark:text-dark-text min-h-screen">
-            {user ? (
-                <MainApp user={user} currentView={currentView} setCurrentView={setCurrentView} showToast={showToast} theme={theme} setTheme={setTheme} onSignOut={handleSignOut}/>
-            ) : (
-                <AuthScreen onLoginSuccess={handleLoginSuccess} showToast={showToast} theme={theme} setTheme={setTheme} />
-            )}
-            {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
-        </div>
+        <ErrorBoundary>
+            <div className="text-light-text dark:text-dark-text min-h-screen bg-slate-900 dark:bg-slate-900">
+                {user ? (
+                    <MainApp user={user} currentView={currentView} setCurrentView={setCurrentView} showToast={showToast} theme={theme} setTheme={setTheme} onSignOut={handleSignOut}/>
+                ) : (
+                    <AuthScreen onLoginSuccess={handleLoginSuccess} showToast={showToast} theme={theme} setTheme={setTheme} />
+                )}
+                {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
+            </div>
+        </ErrorBoundary>
     );
 }
 

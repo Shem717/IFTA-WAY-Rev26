@@ -38,15 +38,24 @@ const AuthScreen: FC<AuthScreenProps> = ({ onLoginSuccess, showToast, theme, set
     };
     
     const handleGoogleSignIn = async () => {
-        showToast("Google Sign-In coming soon.", "info");
+        try {
+            setIsLoading(true);
+            const { loginWithGoogle } = await import('../services/authService');
+            const user = await loginWithGoogle();
+            onLoginSuccess({ user: { id: user.uid, email: user.email }, token: 'firebase' });
+        } catch (error: any) {
+            showToast(error.message || "Google sign-in failed.", "error");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen p-4 relative">
+        <div className="flex items-center justify-center min-h-screen p-4 relative bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
              <div className="absolute top-4 right-4">
                 <ThemeToggle theme={theme} setTheme={setTheme} />
             </div>
-             <div className="w-full max-w-md bg-light-card/80 dark:bg-dark-card/80 backdrop-blur-lg p-8 rounded-xl shadow-2xl border border-light-border/50 dark:border-dark-border/50">
+             <div className="w-full max-w-md bg-slate-800/90 backdrop-blur-lg p-8 rounded-xl shadow-2xl border border-slate-600/50">
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold text-light-accent dark:text-dark-accent flex items-center justify-center gap-3">
                         <i className="fas fa-gas-pump"></i> IFTA WAY

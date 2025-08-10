@@ -7,6 +7,7 @@ import {
 } from "./authService";
 import * as fsSvc from "./firestoreService";
 import { uploadReceipt } from "./storageService";
+import { scanReceiptViaCallable } from "./aiService";
 
 const USE_FIREBASE = Boolean((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID) || (import.meta as any).env?.VITE_USE_FIREBASE === 'true';
 const API_BASE_URL = 'https://ifta-way-backend.onrender.com';
@@ -81,10 +82,13 @@ const logout = async () => {
 
 // --- AI Receipt Scan ---
 const scanReceipt = (base64Image: string, mimeType: string): Promise<any> => {
+  if (!USE_FIREBASE) {
     return fetchApi('/api/scan-receipt', {
-        method: 'POST',
-        body: JSON.stringify({ image: base64Image, mimeType }),
+      method: 'POST',
+      body: JSON.stringify({ image: base64Image, mimeType }),
     });
+  }
+  return scanReceiptViaCallable(base64Image, mimeType);
 };
 
 // --- Trucks ---
