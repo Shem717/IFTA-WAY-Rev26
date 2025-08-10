@@ -10,7 +10,7 @@ import { uploadReceipt } from "./storageService";
 import { scanReceiptViaCallable } from "./aiService";
 
 const USE_FIREBASE = Boolean((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID) || (import.meta as any).env?.VITE_USE_FIREBASE === 'true';
-const API_BASE_URL = 'https://ifta-way-backend.onrender.com';
+const API_BASE_URL: string = ((import.meta as any).env?.VITE_API_BASE_URL as string) || 'http://localhost:10000';
 
 async function fetchApi(path: string, options: RequestInit = {}) {
     const token = localStorage.getItem('iftaway_token');

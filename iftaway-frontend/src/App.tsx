@@ -10,7 +10,7 @@ import { Spinner } from './components/ui/Spinner';
 import { Toast } from './components/ui/Toast';
 
 interface User {
-  id: number;
+  id: string;
   email: string;
 }
 
@@ -35,11 +35,11 @@ function App() {
     useEffect(() => {
         const unsubscribe = onAuthChange((u) => {
             if (u) {
-                setUser({ id: (u.uid as unknown) as number, email: u.email || '' });
+                setUser({ id: u.uid, email: u.email || '' });
             } else {
                 const token = localStorage.getItem('iftaway_token');
                 if (token) {
-                    apiService.getMe().then((data) => setUser(data.user)).catch(() => setUser(null));
+                    apiService.getMe().then((data) => setUser({ id: String(data.user.id), email: data.user.email })).catch(() => setUser(null));
                 } else {
                     setUser(null);
                 }
@@ -49,9 +49,9 @@ function App() {
         return () => unsubscribe();
     }, []);
     
-    const handleLoginSuccess = (data: { user: User, token: string }) => {
+    const handleLoginSuccess = (data: { user: any, token: string }) => {
         localStorage.setItem('iftaway_token', data.token);
-        setUser(data.user);
+        setUser({ id: String(data.user.id), email: data.user.email });
     };
     
     const handleSignOut = async () => {

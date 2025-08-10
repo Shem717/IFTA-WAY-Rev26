@@ -12,7 +12,7 @@ import ReportsView from './ReportsView';
 import SettingsView from './SettingsView';
 
 interface User {
-    id: number;
+    id: string;
     email: string;
 }
 

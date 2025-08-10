@@ -2,7 +2,7 @@ import React, { FC } from 'react';
 import apiService from '../services/apiService';
 import { FuelEntry } from '../types';
 
-interface User { id: number; email: string; }
+interface User { id: string; email: string; }
 
 interface ActionSheetProps { 
     entry: FuelEntry; 

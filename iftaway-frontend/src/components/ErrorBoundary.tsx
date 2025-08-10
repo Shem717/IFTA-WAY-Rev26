@@ -1,47 +1,34 @@
-import React, { Component, ReactNode } from 'react';
+import React from 'react';
 
-interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
-}
+type ErrorBoundaryState = { hasError: boolean };
 
-interface State {
-  hasError: boolean;
-  error?: Error;
-}
+type ErrorBoundaryProps = { children: React.ReactNode };
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+  componentDidCatch(error: unknown) {
+    console.error('Unhandled error:', error);
   }
 
   render() {
     if (this.state.hasError) {
-      return this.props.fallback || (
-        <div className="flex items-center justify-center min-h-screen bg-slate-900">
-          <div className="text-center p-8 bg-slate-800 rounded-lg border border-slate-600">
-            <h2 className="text-2xl font-bold text-red-400 mb-4">Something went wrong</h2>
-            <p className="text-slate-300 mb-4">We're sorry, but something unexpected happened.</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Reload Page
-            </button>
+      return (
+        <div className="min-h-screen flex items-center justify-center text-center p-8 text-light-text dark:text-dark-text">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
+            <p className="opacity-80">Please refresh the page or try again later.</p>
           </div>
         </div>
       );
     }
-
     return this.props.children;
   }
 }

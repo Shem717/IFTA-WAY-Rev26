@@ -15,6 +15,11 @@ app.use(express.json({ limit: '10mb' }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'a-secure-default-secret-for-development-only';
 
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('JWT_SECRET must be set in production');
+  process.exit(1);
+}
+
 app.use((req, res, next) => {
     const originalJson = res.json;
     res.json = function(body) {
@@ -110,7 +115,7 @@ app.post('/api/scan-receipt', authenticateToken, async (req, res) => {
         
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-flash',
-          contents: { parts: [ {text: prompt}, imagePart ] },
+          contents: [{ parts: [ {text: prompt}, imagePart ] }],
           config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -127,7 +132,8 @@ app.post('/api/scan-receipt', authenticateToken, async (req, res) => {
           }
         });
 
-        const parsedData = JSON.parse(response.text);
+        const text = await response.text();
+        const parsedData = JSON.parse(text);
 
         res.json(parsedData);
     } catch (error) {
