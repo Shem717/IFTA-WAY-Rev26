@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed"
   },
   "dependencies": {
     "firebase": "^12.0.0",
@@ -16,6 +19,7 @@
     "recharts": "^2.7.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.0.3",
