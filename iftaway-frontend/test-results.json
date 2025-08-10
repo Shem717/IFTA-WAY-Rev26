@@ -1,0 +1,300 @@
+{
+  "config": {
+    "configFile": "/workspace/iftaway-frontend/playwright.config.ts",
+    "rootDir": "/workspace/iftaway-frontend/tests",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/workspace/iftaway-frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/workspace/iftaway-frontend/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.54.2",
+    "workers": 2,
+    "webServer": {
+      "command": "npm run preview",
+      "port": 4173,
+      "reuseExistingServer": true
+    }
+  },
+  "suites": [
+    {
+      "title": "app.spec.ts",
+      "file": "app.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "IFTA WAY App",
+          "file": "app.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should load the app and show login screen",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 502,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-08-10T04:16:16.386Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-f003dc0f2a3e32e0225a",
+              "file": "app.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "should show Google Sign-In button in Firebase mode",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 474,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ Firebase mode detected - Google Sign-In button is visible\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-08-10T04:16:16.388Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-c628187d5d5864bae490",
+              "file": "app.spec.ts",
+              "line": 21,
+              "column": 3
+            },
+            {
+              "title": "should have working theme toggle",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 533,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-08-10T04:16:16.919Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-f6cc4385bcf885078c43",
+              "file": "app.spec.ts",
+              "line": 40,
+              "column": 3
+            },
+            {
+              "title": "should attempt login with demo credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3509,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "⚠ Login failed - Error message displayed (expected if backend is down)\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-08-10T04:16:16.952Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-899e522a9e1cd809a5e1",
+              "file": "app.spec.ts",
+              "line": 60,
+              "column": 3
+            },
+            {
+              "title": "should be responsive on mobile",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 330,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-08-10T04:16:17.460Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-b58b42b3cd100c221328",
+              "file": "app.spec.ts",
+              "line": 101,
+              "column": 3
+            },
+            {
+              "title": "should check for console errors",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2337,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "✓ No critical console errors detected\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-08-10T04:16:17.793Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-f63d37447fd45ae347a7",
+              "file": "app.spec.ts",
+              "line": 115,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-08-10T04:16:15.560Z",
+    "duration": 4932.4039999999995,
+    "expected": 6,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
