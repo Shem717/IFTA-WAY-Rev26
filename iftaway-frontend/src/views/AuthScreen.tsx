@@ -17,6 +17,7 @@ const AuthScreen: FC<AuthScreenProps> = ({ onLoginSuccess, showToast, theme, set
     const [password, setPassword] = useState('password123');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const USE_FIREBASE = Boolean((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID) || (import.meta as any).env?.VITE_USE_FIREBASE === 'true';
 
     const handleAuthAction = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,12 +77,16 @@ const AuthScreen: FC<AuthScreenProps> = ({ onLoginSuccess, showToast, theme, set
                         {isLoginView ? 'Login' : 'Create Account'}
                     </button>
                 </form>
-                <div className="relative my-6 flex items-center">
-                    <hr className="flex-grow border-light-border dark:border-dark-border" /><span className="mx-4 text-light-text-secondary dark:text-dark-text-secondary text-sm">OR</span><hr className="flex-grow border-light-border dark:border-dark-border" />
-                </div>
-                <button onClick={handleGoogleSignIn} className="w-full bg-transparent border border-light-border dark:border-dark-border text-light-text dark:text-dark-text py-3 rounded-lg font-semibold hover:bg-slate-200/50 dark:hover:bg-dark-card/80 hover:text-light-accent dark:hover:text-dark-accent hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i className="fab fa-google text-light-accent dark:text-dark-accent"></i> Sign in with Google
-                </button>
+                {USE_FIREBASE && (
+                  <>
+                    <div className="relative my-6 flex items-center">
+                      <hr className="flex-grow border-light-border dark:border-dark-border" /><span className="mx-4 text-light-text-secondary dark:text-dark-text-secondary text-sm">OR</span><hr className="flex-grow border-light-border dark:border-dark-border" />
+                    </div>
+                    <button onClick={handleGoogleSignIn} className="w-full bg-transparent border border-light-border dark:border-dark-border text-light-text dark:text-dark-text py-3 rounded-lg font-semibold hover:bg-slate-200/50 dark:hover:bg-dark-card/80 hover:text-light-accent dark:hover:text-dark-accent hover:border-light-accent/50 dark:hover:border-dark-accent/50 transition-colors flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
+                      <i className="fab fa-google text-light-accent dark:text-dark-accent"></i> Sign in with Google
+                    </button>
+                  </>
+                )}
                 <p className="text-center mt-6 text-sm text-light-text-secondary dark:text-dark-text-secondary">
                     {isLoginView ? "Don't have an account?" : "Already have an account?"}
                     <button onClick={() => setIsLoginView(!isLoginView)} className="font-semibold text-light-accent dark:text-dark-accent ml-1 hover:opacity-80">
