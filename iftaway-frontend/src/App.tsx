@@ -3,8 +3,6 @@ import { View, Theme } from './types';
 import apiService from './services/apiService';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { onAuthChange } from './services/authService';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { ThemeProvider } from './contexts/ThemeContext';
 
 import MainApp from './views/MainApp';
 import AuthScreen from './views/AuthScreen';
@@ -21,7 +19,7 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
     const [currentView, setCurrentView] = useState<View>('dashboard');
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-    
+    const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'dark');
     
     useEffect(() => {
     const root = window.document.documentElement;
