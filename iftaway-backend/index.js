@@ -241,19 +241,6 @@ const PORT = process.env.PORT || 10000;
 const startServer = async () => {
     await db.initDb();
 
-    // Create a demo user if one doesn't exist
-    const demoUserEmail = 'demo@iftaway.com';
-    try {
-        const demoUserRes = await db.query('SELECT id FROM users WHERE email = $1', [demoUserEmail]);
-        if (demoUserRes.rows.length === 0) {
-            console.log('Demo user not found, creating one...');
-            await createUser(demoUserEmail, 'password123');
-            console.log(`Demo user created. Email: ${demoUserEmail}, Password: password123`);
-        }
-    } catch (err) {
-        console.error("Error during demo user check/creation:", err);
-    }
-
     app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
 };
 startServer();
