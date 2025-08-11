@@ -2,6 +2,13 @@
   "functions": {
     "source": "functions"
   },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "hosting": {
     "public": "iftaway-frontend/dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
@@ -24,4 +31,3 @@
     ]
   }
 }
-
