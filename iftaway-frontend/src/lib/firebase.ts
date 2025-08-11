@@ -25,9 +25,9 @@ export function getFirebase(): FirebaseServices {
 
   const firebaseConfig = {
     apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string | undefined) ?? 'AIzaSyB4otS98U1W8NxqWNVBcuEsQBRUKMlnOvY',
-    authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined) ?? 'ifta-way.firebaseapp.com',
-    projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined) ?? 'ifta-way',
-    storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string | undefined) ?? 'ifta-way.appspot.com',
+    authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined) ?? 'iftaway.firebaseapp.com',
+    projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined) ?? 'iftaway',
+    storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string | undefined) ?? 'iftaway.appspot.com',
     appId: (import.meta.env.VITE_FIREBASE_APP_ID as string | undefined) ?? '1:176569825506:web:059fa1dce6dad7e9c546bb',
   };
 
@@ -43,5 +43,4 @@ export function getFirebase(): FirebaseServices {
   return services;
 }
 
-export const appId = 'ifta-way';
-
+export const appId = 'iftaway';
