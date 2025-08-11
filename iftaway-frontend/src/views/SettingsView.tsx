@@ -2,6 +2,7 @@ import React, { FC, useState } from 'react';
 import apiService from '../services/apiService';
 import { generateDemoEntries, convertEntriesToCsv } from '../utils/csvHelpers';
 import { Truck, Theme, UploadProgress } from '../types';
+import { uploadFile } from '../services/uploadService';
 
 import { FormCard } from '../components/ui/FormCard';
 import { Modal } from '../components/ui/Modal';
@@ -28,7 +29,6 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
     const [uploadProgress, setUploadProgress] = useState<UploadProgress>({ status: 'idle', percentage: 0, message: '' });
     const [showUploadConfirm, setShowUploadConfirm] = useState(false);
 
-
     const handleAddTruck = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newTruckNumber || !newTruckMakeModel) return;
@@ -42,7 +42,7 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
             showToast(error.message || "Failed to add truck.", "error");
         }
     };
-    
+
     const handleDeleteTruck = async (truckId: string) => {
         if (!window.confirm("Are you sure you want to delete this truck?")) return;
         try {
@@ -67,77 +67,31 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
-    
-    const handleCsvUploadClick = async () => {
+
+    const handleCsvUpload = async () => {
         if (!csvFile) {
             showToast("Please select a CSV file first.", "error");
             return;
         }
 
-        setUploadProgress({ status: 'reading', percentage: 0, message: 'Reading CSV file...' });
-        
+        setUploadProgress({ status: 'uploading', percentage: 0, message: 'Uploading CSV file...' });
+
         try {
-            const text = await csvFile.text();
-            const lines = text.split('\n');
-            const headers = lines[0].split(',').map(h => h.trim());
-            
-            // Validate headers
-            const requiredHeaders = ['truckNumber', 'dateTime', 'odometer', 'city', 'state', 'fuelType', 'amount', 'cost'];
-            const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-            
-            if (missingHeaders.length > 0) {
-                throw new Error(`Missing required headers: ${missingHeaders.join(', ')}`);
-            }
+            const downloadURL = await uploadFile(csvFile, `csv-uploads/${user.id}`, (progress) => {
+                setUploadProgress({ status: 'uploading', percentage: progress, message: 'Uploading CSV file...' });
+            });
 
-            setUploadProgress({ status: 'parsing', percentage: 30, message: 'Parsing entries...' });
-            
-            const entries = [];
-            for (let i = 1; i < lines.length; i++) {
-                if (lines[i].trim()) {
-                    const values = lines[i].split(',').map(v => v.trim());
-                    const entry = {
-                        truckNumber: values[headers.indexOf('truckNumber')],
-                        dateTime: values[headers.indexOf('dateTime')],
-                        odometer: parseFloat(values[headers.indexOf('odometer')]) || 0,
-                        city: values[headers.indexOf('city')],
-                        state: values[headers.indexOf('state')],
-                        fuelType: values[headers.indexOf('fuelType')] as 'diesel' | 'def' | 'custom',
-                        amount: parseFloat(values[headers.indexOf('amount')]) || 0,
-                        cost: parseFloat(values[headers.indexOf('cost')]) || 0,
-                        isIgnored: false,
-                        isDemo: true
-                    };
-                    entries.push(entry);
-                }
-            }
+            setUploadProgress({ status: 'processing', percentage: 100, message: 'Processing file on server...' });
 
-            setUploadProgress({ status: 'uploading', percentage: 60, message: `Uploading ${entries.length} entries...` });
-            
-            // Upload entries to Firebase
-            let uploaded = 0;
-            for (const entry of entries) {
-                try {
-                    await apiService.addEntry(entry);
-                    uploaded++;
-                    const percentage = 60 + (uploaded / entries.length) * 30;
-                    setUploadProgress({ status: 'uploading', percentage, message: `Uploaded ${uploaded}/${entries.length} entries...` });
-                } catch (error) {
-                    console.error('Failed to upload entry:', error);
-                }
-            }
+            await apiService.processCsv(downloadURL);
 
-            setUploadProgress({ status: 'success', percentage: 100, message: `Successfully uploaded ${uploaded} entries!` });
-            showToast(`Successfully uploaded ${uploaded} entries!`, "success");
+            showToast("CSV processing started. You'll be notified upon completion.", "success");
             setCsvFile(null);
-            
-            // Trigger refresh
-            setTimeout(() => {
-                setUploadProgress({ status: 'idle', percentage: 0, message: '' });
-            }, 3000);
-            
+            setUploadProgress({ status: 'idle', percentage: 0, message: '' });
+
         } catch (error: any) {
-            setUploadProgress({ status: 'error', percentage: 0, message: error.message });
-            showToast(error.message || 'Failed to process CSV file.', "error");
+            setUploadProgress({ status: 'error', percentage: 0, message: error.message || 'Upload failed.' });
+            showToast(error.message || 'Failed to upload CSV file.', "error");
         }
     };
 
@@ -150,7 +104,7 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
         }
     };
 
-    const isProcessing = uploadProgress.status === 'reading' || uploadProgress.status === 'parsing' || uploadProgress.status === 'uploading';
+    const isProcessing = uploadProgress.status === 'uploading' || uploadProgress.status === 'processing';
 
     return (
         <div className="space-y-8">
@@ -171,7 +125,7 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
                     <button onClick={onSignOut} className="font-semibold text-red-500 hover:text-red-600 dark:hover:text-red-400">Sign Out</button>
                 </div>
             </FormCard>
-            
+
             <FormCard title={<><i className="fas fa-sun text-light-accent dark:text-dark-accent"></i> Theme</>}>
                  <div className="flex items-center justify-between">
                     <p>Switch between light and dark mode.</p>
@@ -204,7 +158,7 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
                     {trucks.length === 0 && <p className="text-center text-sm text-light-text-secondary dark:text-dark-text-secondary pt-4">No trucks added yet.</p>}
                 </div>
             </FormCard>
-            
+
             <FormCard title={<><i className="fas fa-upload text-light-accent dark:text-dark-accent"></i> Upload Historical Data</>}>
                 <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mb-4">
                     Upload a CSV file of your past fuel entries to analyze historical data. This is also a great way to test the app's features with a larger dataset.
@@ -220,7 +174,7 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
                         <i className="fas fa-download mr-1"></i> Download sample CSV with 70+ demo entries
                     </button>
                 </div>
-                
+
                 <div className="mt-6 flex flex-col md:flex-row items-center gap-4">
                     <div className="flex-1 w-full">
                         <label htmlFor="csv-upload" className="w-full h-12 px-4 py-2 rounded-lg border-2 border-dashed border-light-border dark:border-dark-border flex items-center justify-center cursor-pointer hover:border-light-accent dark:hover:border-dark-accent transition-colors">
@@ -229,8 +183,8 @@ const SettingsView: FC<SettingsViewProps> = ({ user, trucks, showToast, theme, s
                         </label>
                         <input id="csv-upload" type="file" accept=".csv" onChange={handleFileSelect} className="hidden" />
                     </div>
-                    <button 
-                        onClick={handleCsvUploadClick} 
+                    <button
+                        onClick={handleCsvUpload}
                         disabled={!csvFile || isProcessing}
                         className="px-6 py-2 h-12 rounded-lg font-semibold text-white bg-light-accent dark:bg-dark-accent hover:opacity-90 transition flex items-center justify-center gap-2 disabled:bg-slate-400 dark:disabled:bg-slate-600 w-full md:w-56"
                     >

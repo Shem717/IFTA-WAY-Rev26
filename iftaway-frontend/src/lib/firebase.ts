@@ -25,6 +25,14 @@ export function getFirebase(): FirebaseServices {
     appId: '1:176569825506:web:059fa1dce6dad7e9c546bb',
   };
 
+  /*
+   * IMPORTANT: For Google Sign-in to work, you must add the domain where you are hosting the application to the list of authorized domains in the Firebase console.
+   * 1. Go to the Firebase console: https://console.firebase.google.com/
+   * 2. Select your project.
+   * 3. Go to Authentication > Sign-in method.
+   * 4. Add the domain to the list of authorized domains.
+   */
+
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);

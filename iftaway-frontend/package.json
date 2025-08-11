@@ -4,7 +4,14 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Professional IFTA mileage and fuel tracking for truckers",
-  "keywords": ["ifta", "trucking", "fuel", "mileage", "tracking", "pwa"],
+  "keywords": [
+    "ifta",
+    "trucking",
+    "fuel",
+    "mileage",
+    "tracking",
+    "pwa"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -23,12 +30,14 @@
     "heic2any": "0.0.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^2.7.2"
+    "recharts": "^2.7.2",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.2",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.0.3",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.27",
