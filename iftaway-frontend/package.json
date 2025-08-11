@@ -3,13 +3,20 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "description": "Professional IFTA mileage and fuel tracking for truckers",
+  "keywords": ["ifta", "trucking", "fuel", "mileage", "tracking", "pwa"],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:all": "npm run build && firebase deploy",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed"
+    "test:headed": "playwright test --headed",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "firebase": "^12.0.0",
@@ -27,6 +34,7 @@
     "postcss": "^8.4.27",
     "tailwindcss": "^3.3.3",
     "typescript": "^5.0.2",
-    "vite": "^4.4.5"
+    "vite": "^4.4.5",
+    "vite-plugin-pwa": "^0.17.0"
   }
 }

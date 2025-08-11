@@ -9,62 +9,18 @@ import * as fsSvc from "./firestoreService";
 import { uploadReceipt } from "./storageService";
 import { scanReceiptViaCallable } from "./aiService";
 
-const USE_FIREBASE = Boolean((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID) || (import.meta as any).env?.VITE_USE_FIREBASE === 'true';
-const API_BASE_URL: string = ((import.meta as any).env?.VITE_API_BASE_URL as string) || 'http://localhost:10000';
-
-async function fetchApi(path: string, options: RequestInit = {}) {
-    const token = localStorage.getItem('iftaway_token');
-    const headers = new Headers(options.headers || {});
-    
-    if (!(options.body instanceof FormData)) {
-        headers.set('Content-Type', 'application/json');
-    }
-
-    if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}${path}`, {
-            ...options,
-            headers,
-        });
-
-        if (!response.ok) {
-            let errorData;
-            try {
-                errorData = await response.json();
-            } catch (e) {
-                errorData = { msg: 'An unknown error occurred. The server might be offline.' };
-            }
-            throw new Error(errorData.msg || `Request failed with status ${response.status}`);
-        }
-        
-        if (response.status === 204) {
-            return null;
-        }
-
-        return response.json();
-    } catch (error: any) {
-        throw new Error(error.message || 'Network request failed. Please check your connection.');
-    }
-}
-
 // --- Auth ---
 const register = async (email: string, password: string) => {
-  if (!USE_FIREBASE) return fetchApi('/api/register', { method: 'POST', body: JSON.stringify({ email, password }) });
   const user = await registerWithEmail(email, password);
   return { user: { id: user.uid, email: user.email }, token: 'firebase' };
 };
 
 const login = async (email: string, password: string): Promise<{user: any, token: string}> => {
-  if (!USE_FIREBASE) return fetchApi('/api/login', { method: 'POST', body: JSON.stringify({ email, password }) });
   const user = await loginWithEmail(email, password);
   return { user: { id: user.uid, email: user.email }, token: 'firebase' };
 };
 
 const getMe = async (): Promise<{user: any}> => {
-  if (!USE_FIREBASE) return fetchApi('/api/me');
   const { auth } = getFirebase();
   const u = auth.currentUser;
   if (!u) throw new Error('Not authenticated');
@@ -72,28 +28,17 @@ const getMe = async (): Promise<{user: any}> => {
 };
 
 const logout = async () => {
-  if (!USE_FIREBASE) {
-    localStorage.removeItem('iftaway_token');
-    return;
-  }
   await firebaseLogout();
   localStorage.removeItem('iftaway_token');
 };
 
 // --- AI Receipt Scan ---
 const scanReceipt = (base64Image: string, mimeType: string): Promise<any> => {
-  if (!USE_FIREBASE) {
-    return fetchApi('/api/scan-receipt', {
-      method: 'POST',
-      body: JSON.stringify({ image: base64Image, mimeType }),
-    });
-  }
   return scanReceiptViaCallable(base64Image, mimeType);
 };
 
 // --- Trucks ---
 const getTrucks = async (): Promise<Truck[]> => {
-  if (!USE_FIREBASE) return fetchApi('/api/trucks');
   const { auth } = getFirebase();
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Not authenticated');
@@ -101,85 +46,144 @@ const getTrucks = async (): Promise<Truck[]> => {
 };
 
 const addTruck = async (number: string, makeModel: string): Promise<Truck> => {
-  if (!USE_FIREBASE) return fetchApi('/api/trucks', { method: 'POST', body: JSON.stringify({ number, makeModel }) });
   const { auth } = getFirebase();
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Not authenticated');
   const id = await fsSvc.addTruck(uid, number, makeModel);
-  return { id, userId: 0 as any, number, makeModel, createdAt: new Date().toISOString() } as unknown as Truck;
+  return { id, number, makeModel, userId: 0, createdAt: new Date().toISOString() };
 };
 
-const deleteTruck = async (id: string) => {
-  if (!USE_FIREBASE) return fetchApi(`/api/trucks/${id}`, { method: 'DELETE' });
+const deleteTruck = async (id: string): Promise<void> => {
   const { auth } = getFirebase();
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Not authenticated');
-  return fsSvc.removeTruck(uid, id);
+  await fsSvc.removeTruck(uid, id);
 };
 
 // --- Fuel Entries ---
-const getDashboardStats = (): Promise<any> => fetchApi('/api/dashboard');
-const getPaginatedEntries = (page = 1, limit = 20): Promise<{ entries: FuelEntry[], totalPages: number, currentPage: number }> => {
-    return fetchApi(`/api/entries?page=${page}&limit=${limit}`);
-};
-const getEntries = async (): Promise<FuelEntry[]> => {
-  if (!USE_FIREBASE) return fetchApi('/api/entries');
+const getEntries = async (page = 1, limit = 20): Promise<{ entries: FuelEntry[], totalPages: number, currentPage: number }> => {
   const { auth } = getFirebase();
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Not authenticated');
-  return fsSvc.listEntries(uid);
+  const entries = await fsSvc.listEntries(uid);
+  
+  // Simple pagination
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedEntries = entries.slice(startIndex, endIndex);
+  
+  return {
+    entries: paginatedEntries,
+    totalPages: Math.ceil(entries.length / limit),
+    currentPage: page
+  };
 };
 
-const addEntry = async (entryData: Partial<FuelEntry>) => {
-  if (!USE_FIREBASE) return fetchApi('/api/entries', { method: 'POST', body: JSON.stringify(entryData) });
+const addEntry = async (entry: Partial<FuelEntry>): Promise<FuelEntry> => {
   const { auth } = getFirebase();
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Not authenticated');
-  const id = await fsSvc.addEntry(uid, entryData);
-  return { id } as any;
+  const id = await fsSvc.addEntry(uid, entry);
+  return { id, ...entry } as FuelEntry;
 };
 
-const updateEntry = async (id: string, entryData: Partial<FuelEntry>) => {
-  if (!USE_FIREBASE) return fetchApi(`/api/entries/${id}`, { method: 'PUT', body: JSON.stringify(entryData) });
+const updateEntry = async (id: string, entry: Partial<FuelEntry>): Promise<FuelEntry> => {
   const { auth } = getFirebase();
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Not authenticated');
-  await fsSvc.updateEntry(uid, id, entryData);
-  return { id } as any;
+  await fsSvc.updateEntry(uid, id, entry);
+  return { id, ...entry } as FuelEntry;
 };
 
-const deleteEntry = async (id: string) => {
-  if (!USE_FIREBASE) return fetchApi(`/api/entries/${id}`, { method: 'DELETE' });
+const deleteEntry = async (id: string): Promise<void> => {
   const { auth } = getFirebase();
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Not authenticated');
-  return fsSvc.removeEntry(uid, id);
+  await fsSvc.removeEntry(uid, id);
 };
 
-const toggleIgnoreEntry = async (id: string, isIgnored: boolean) => {
-  if (!USE_FIREBASE) return fetchApi(`/api/entries/${id}/ignore`, { method: 'PUT', body: JSON.stringify({ isIgnored }) });
+// --- Dashboard Stats ---
+const getDashboardStats = async (): Promise<any> => {
   const { auth } = getFirebase();
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Not authenticated');
-  return fsSvc.updateEntry(uid, id, { isIgnored });
+  
+  const entries = await fsSvc.listEntries(uid);
+  
+  // Calculate stats from entries
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  
+  const currentMonthEntries = entries.filter(entry => {
+    const entryDate = new Date(entry.dateTime);
+    return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
+  });
+  
+  const prevMonthEntries = entries.filter(entry => {
+    const entryDate = new Date(entry.dateTime);
+    return entryDate.getMonth() === prevMonth && entryDate.getFullYear() === prevYear;
+  });
+  
+  const calculateStats = (entries: FuelEntry[]) => {
+    const totalCost = entries.reduce((sum, entry) => sum + entry.cost, 0);
+    const totalGallons = entries.reduce((sum, entry) => sum + entry.amount, 0);
+    const miles = entries.length > 1 ? 
+      Math.max(...entries.map(e => e.odometer)) - Math.min(...entries.map(e => e.odometer)) : 0;
+    const mpg = totalGallons > 0 ? miles / totalGallons : 0;
+    
+    return { miles, expenses: totalCost, mpg };
+  };
+  
+  const currentMonthStats = calculateStats(currentMonthEntries);
+  const prevMonthStats = calculateStats(prevMonthEntries);
+  
+  // Generate monthly cost data for chart
+  const monthlyCostData = [];
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(currentYear, currentMonth - i, 1);
+    const monthEntries = entries.filter(entry => {
+      const entryDate = new Date(entry.dateTime);
+      return entryDate.getMonth() === date.getMonth() && entryDate.getFullYear() === date.getFullYear();
+    });
+    const cost = monthEntries.reduce((sum, entry) => sum + entry.cost, 0);
+    monthlyCostData.push({
+      name: date.toLocaleDateString('en-US', { month: 'short' }),
+      cost: cost
+    });
+  }
+  
+  return {
+    currentMonthStats,
+    prevMonthStats,
+    monthlyCostData,
+    recentEntries: entries.slice(0, 5)
+  };
 };
 
-const apiService = {
-    register,
-    login,
-    getMe,
-    logout,
-    scanReceipt,
-    getTrucks,
-    addTruck,
-    deleteTruck,
-    getDashboardStats,
-    getPaginatedEntries,
-    getEntries,
-    addEntry,
-    updateEntry,
-    deleteEntry,
-    toggleIgnoreEntry
+// --- File Upload ---
+const uploadReceiptFile = async (file: File): Promise<string> => {
+  const { auth } = getFirebase();
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('Not authenticated');
+  return uploadReceipt(uid, file);
 };
 
-export default apiService;
+export default {
+  register,
+  login,
+  getMe,
+  logout,
+  scanReceipt,
+  getTrucks,
+  addTruck,
+  deleteTruck,
+  getEntries,
+  addEntry,
+  updateEntry,
+  deleteEntry,
+  getDashboardStats,
+  uploadReceiptFile,
+};

@@ -16,14 +16,18 @@ interface DashboardViewProps {
 const DashboardView: FC<DashboardViewProps> = ({ onOpenActionSheet, showToast, theme, onDataChange }) => {
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     
     useEffect(() => {
         const fetchDashboardData = async () => {
             setIsLoading(true);
+            setError(null);
             try {
                 const data = await apiService.getDashboardStats();
                 setDashboardData(data);
             } catch (error: any) {
+                console.error('Dashboard error:', error);
+                setError(error.message || "Couldn't load dashboard data.");
                 showToast(error.message || "Couldn't load dashboard data.", "error");
             } finally {
                 setIsLoading(false);
@@ -75,12 +79,33 @@ const DashboardView: FC<DashboardViewProps> = ({ onOpenActionSheet, showToast, t
         return <p className="text-light-text-secondary dark:text-dark-text-secondary text-sm mt-1">{diff >= 0 ? '+' : '−'}{formattedDiff} from last month</p>;
     };
 
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <i className="fas fa-exclamation-triangle text-red-500 text-4xl"></i>
+                <h3 className="text-xl font-semibold text-light-text dark:text-dark-text">Dashboard Error</h3>
+                <p className="text-light-text-secondary dark:text-dark-text-secondary text-center max-w-md">{error}</p>
+                <button 
+                    onClick={() => window.location.reload()} 
+                    className="px-4 py-2 bg-light-accent dark:bg-dark-accent text-white rounded-lg hover:opacity-90 transition-opacity"
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
     if (isLoading || !dashboardData) {
-        return <div className="flex justify-center items-center py-20"><Spinner className="w-10 h-10" /></div>;
+        return (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <Spinner className="w-10 h-10" />
+                <p className="text-light-text-secondary dark:text-dark-text-secondary">Loading dashboard...</p>
+            </div>
+        );
     }
 
     const StatCard: FC<{ title: string; value: string; trend: React.ReactNode; diff: React.ReactNode }> = ({ title, value, trend, diff }) => (
-        <div className="bg-light-card dark:bg-dark-card p-6 rounded-lg shadow-md border border-light-border dark:border-dark-border">
+        <div className="bg-light-card dark:bg-dark-card p-6 rounded-lg shadow-md border border-light-border dark:border-dark-border hover:shadow-lg transition-shadow">
             <p className="text-light-text-secondary dark:text-dark-text-secondary font-medium">{title}</p>
             <div className="flex items-baseline gap-3 mt-2">
                 <p className="text-4xl font-bold text-light-text dark:text-dark-text">{value}</p>
@@ -115,7 +140,12 @@ const DashboardView: FC<DashboardViewProps> = ({ onOpenActionSheet, showToast, t
             <FormCard title={<><i className="fas fa-history text-light-accent dark:text-dark-accent"></i> Recent Entries</>}>
                 <div className="space-y-4">
                     {recentEntries.map((entry: FuelEntry) => <EntryCard key={entry.id} entry={entry} onOpenActionSheet={onOpenActionSheet} />)}
-                    {recentEntries.length === 0 && <p className="text-center text-light-text-secondary dark:text-dark-text-secondary py-4">No entries yet. Add one to get started!</p>}
+                    {recentEntries.length === 0 && (
+                        <div className="text-center py-8">
+                            <i className="fas fa-gas-pump text-4xl text-light-text-secondary dark:text-dark-text-secondary mb-4"></i>
+                            <p className="text-light-text-secondary dark:text-dark-text-secondary">No entries yet. Add your first fuel entry to get started!</p>
+                        </div>
+                    )}
                 </div>
             </FormCard>
             <FormCard title={<><i className="fas fa-chart-area text-light-accent dark:text-dark-accent"></i> Monthly Fuel Cost</>}>
