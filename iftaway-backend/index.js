@@ -5,6 +5,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('./db');
+const { getDashboardStats, getPaginatedEntries } = require('./db_queries');
 const camelcaseKeys = require('camelcase-keys');
 const snakecaseKeys = require('snakecase-keys');
 const { GoogleGenAI, Type } = require("@google/genai");
@@ -149,11 +150,26 @@ Use numeric values only for costs and gallons without currency symbols.`;
     }
 });
 
+app.get('/api/dashboard', authenticateToken, async (req, res) => {
+    try {
+        const stats = await getDashboardStats(db, req.user.userId);
+        res.json(stats);
+    } catch (err) {
+        console.error('Error fetching dashboard stats:', err.message);
+        res.status(500).json({ msg: 'Server error fetching dashboard data.' });
+    }
+});
+
 app.get('/api/entries', authenticateToken, async (req, res) => {
     try {
-        const allEntries = await db.query('SELECT * FROM fuel_entries WHERE user_id = $1 ORDER BY date_time DESC', [req.user.userId]);
-        res.json(allEntries.rows);
-    } catch (err) { console.error(err.message); res.status(500).json({ msg: 'Server error' }); }
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const data = await getPaginatedEntries(db, req.user.userId, page, limit);
+        res.json(data);
+    } catch (err) {
+        console.error('Error fetching paginated entries:', err.message);
+        res.status(500).json({ msg: 'Server error fetching entries.' });
+    }
 });
 
 app.post('/api/entries', authenticateToken, async (req, res) => {

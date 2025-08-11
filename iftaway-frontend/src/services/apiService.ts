@@ -118,6 +118,10 @@ const deleteTruck = async (id: string) => {
 };
 
 // --- Fuel Entries ---
+const getDashboardStats = (): Promise<any> => fetchApi('/api/dashboard');
+const getPaginatedEntries = (page = 1, limit = 20): Promise<{ entries: FuelEntry[], totalPages: number, currentPage: number }> => {
+    return fetchApi(`/api/entries?page=${page}&limit=${limit}`);
+};
 const getEntries = async (): Promise<FuelEntry[]> => {
   if (!USE_FIREBASE) return fetchApi('/api/entries');
   const { auth } = getFirebase();
@@ -169,6 +173,8 @@ const apiService = {
     getTrucks,
     addTruck,
     deleteTruck,
+    getDashboardStats,
+    getPaginatedEntries,
     getEntries,
     addEntry,
     updateEntry,

@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect, useMemo } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import apiService from '../services/apiService';
 import { FuelEntry, Theme } from '../types';
 import { EntryCard } from '../components/EntryCard';
@@ -14,64 +14,30 @@ interface DashboardViewProps {
 }
 
 const DashboardView: FC<DashboardViewProps> = ({ onOpenActionSheet, showToast, theme, onDataChange }) => {
-    const [entries, setEntries] = useState<FuelEntry[]>([]);
+    const [dashboardData, setDashboardData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     
     useEffect(() => {
-        const fetchEntries = async () => {
+        const fetchDashboardData = async () => {
             setIsLoading(true);
             try {
-                const fetchedEntries = await apiService.getEntries();
-                setEntries(fetchedEntries);
+                const data = await apiService.getDashboardStats();
+                setDashboardData(data);
             } catch (error: any) {
                 showToast(error.message || "Couldn't load dashboard data.", "error");
             } finally {
                 setIsLoading(false);
             }
         };
-        fetchEntries();
+        fetchDashboardData();
     }, [showToast, onDataChange]);
 
-    const { currentMonthStats, prevMonthStats } = useMemo(() => {
-        const activeEntries = entries.filter(e => !e.isIgnored);
-        const now = new Date();
-        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-        const calculateMetrics = (logs: FuelEntry[]) => {
-            if (logs.length === 0) return { miles: 0, expenses: 0, mpg: 0, gallons: 0 };
-            const sortedLogs = [...logs].sort((a,b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
-            let miles = 0;
-            if (sortedLogs.length > 1) {
-                for(let i=0; i < sortedLogs.length - 1; i++) {
-                    const odo1 = sortedLogs[i].odometer;
-                    const odo2 = sortedLogs[i+1].odometer;
-                    if(odo2 > odo1) {
-                        miles += odo2 - odo1;
-                    }
-                }
-            }
-            const expenses = logs.reduce((sum, log) => sum + log.cost, 0);
-            const gallons = logs.filter(l => l.fuelType === 'diesel').reduce((sum, log) => sum + log.amount, 0);
-            const mpg = gallons > 0 ? miles / gallons : 0;
-            return { miles, expenses, mpg, gallons };
-        }
-        const currentMonthLogs = activeEntries.filter(log => new Date(log.dateTime) >= currentMonthStart);
-        const prevMonthLogs = activeEntries.filter(log => new Date(log.dateTime) >= prevMonthStart && new Date(log.dateTime) <= prevMonthEnd);
-        return { currentMonthStats: calculateMetrics(currentMonthLogs), prevMonthStats: calculateMetrics(prevMonthLogs) };
-    }, [entries]);
-
-    const monthlyCostData = useMemo(() => {
-        const data: {name: string, cost: number}[] = [];
-        const now = new Date();
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthName = d.toLocaleString('default', { month: 'short' });
-            const monthEntries = entries.filter(e => !e.isIgnored && new Date(e.dateTime).getMonth() === d.getMonth() && new Date(e.dateTime).getFullYear() === d.getFullYear());
-            data.push({ name: monthName, cost: monthEntries.reduce((sum, e) => sum + e.cost, 0) });
-        }
-        return data;
-    }, [entries]);
+    const { currentMonthStats, prevMonthStats, monthlyCostData, recentEntries } = dashboardData || {
+        currentMonthStats: { miles: 0, expenses: 0, mpg: 0 },
+        prevMonthStats: { miles: 0, expenses: 0, mpg: 0 },
+        monthlyCostData: [],
+        recentEntries: [],
+    };
 
     const renderTrend = (current: number, previous: number, type: 'miles' | 'expenses' | 'mpg') => {
         if (previous === 0) return null;
@@ -109,7 +75,7 @@ const DashboardView: FC<DashboardViewProps> = ({ onOpenActionSheet, showToast, t
         return <p className="text-light-text-secondary dark:text-dark-text-secondary text-sm mt-1">{diff >= 0 ? '+' : '−'}{formattedDiff} from last month</p>;
     };
 
-    if (isLoading) {
+    if (isLoading || !dashboardData) {
         return <div className="flex justify-center items-center py-20"><Spinner className="w-10 h-10" /></div>;
     }
 
@@ -127,29 +93,29 @@ const DashboardView: FC<DashboardViewProps> = ({ onOpenActionSheet, showToast, t
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <StatCard 
+                 <StatCard
                     title="Miles This Month"
                     value={currentMonthStats.miles.toLocaleString()}
                     trend={renderTrend(currentMonthStats.miles, prevMonthStats.miles, 'miles')}
                     diff={getDifferenceText(currentMonthStats.miles, prevMonthStats.miles, 'miles')}
                 />
-                <StatCard 
+                <StatCard
                     title="Expenses This Month"
-                    value={`$${typeof currentMonthStats.expenses === 'number' ? currentMonthStats.expenses.toFixed(2) : '0.00'}`}
+                    value={`$${currentMonthStats.expenses.toFixed(2)}`}
                     trend={renderTrend(currentMonthStats.expenses, prevMonthStats.expenses, 'expenses')}
                     diff={getDifferenceText(currentMonthStats.expenses, prevMonthStats.expenses, 'expenses')}
                 />
-                <StatCard 
+                <StatCard
                     title="Average MPG This Month"
-                    value={typeof currentMonthStats.mpg === 'number' ? currentMonthStats.mpg.toFixed(1) : '0.0'}
+                    value={currentMonthStats.mpg.toFixed(1)}
                     trend={renderTrend(currentMonthStats.mpg, prevMonthStats.mpg, 'mpg')}
                     diff={getDifferenceText(currentMonthStats.mpg, prevMonthStats.mpg, 'mpg')}
                 />
             </div>
             <FormCard title={<><i className="fas fa-history text-light-accent dark:text-dark-accent"></i> Recent Entries</>}>
                 <div className="space-y-4">
-                    {entries.filter(e => !e.isIgnored).slice(0, 5).map(entry => <EntryCard key={entry.id} entry={entry} onOpenActionSheet={onOpenActionSheet} />)}
-                    {entries.length === 0 && <p className="text-center text-light-text-secondary dark:text-dark-text-secondary py-4">No entries yet. Add one to get started!</p>}
+                    {recentEntries.map((entry: FuelEntry) => <EntryCard key={entry.id} entry={entry} onOpenActionSheet={onOpenActionSheet} />)}
+                    {recentEntries.length === 0 && <p className="text-center text-light-text-secondary dark:text-dark-text-secondary py-4">No entries yet. Add one to get started!</p>}
                 </div>
             </FormCard>
             <FormCard title={<><i className="fas fa-chart-area text-light-accent dark:text-dark-accent"></i> Monthly Fuel Cost</>}>
