@@ -1,1 +1,49 @@
-{\n  "name": "iftaway-frontend",\n  "private": true,\n  "version": "1.0.0",\n  "type": "module",\n  "description": "Professional IFTA mileage and fuel tracking for truckers",\n  "keywords": [\n    "ifta",\n    "trucking",\n    "fuel",\n    "mileage",\n    "tracking",\n    "pwa"\n  ],\n  "scripts": {\n    "dev": "vite",\n    "build": "vite build",\n    "preview": "vite preview",\n    "deploy": "npm run build && firebase deploy --only hosting",\n    "deploy:functions": "firebase deploy --only functions",\n    "deploy:all": "npm run build && firebase deploy",\n    "test": "playwright test",\n    "test:ui": "playwright test --ui",\n    "test:headed": "playwright test --headed",\n    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",\n    "type-check": "tsc --noEmit"\n  },\n  "dependencies": {\n    "firebase": "^12.0.0",\n    "heic2any": "0.0.4",\n    "react": "^19.0.0",\n    "react-dom": "^19.0.0",\n    "react-router-dom": "^6.23.1",\n    "recharts": "^2.7.2",\n    "uuid": "^11.1.0"\n  },\n  "devDependencies": {\n    "@playwright/test": "^1.54.2",\n    "@types/react": "^19.0.0",\n    "@types/react-dom": "^19.0.2",\n    "@types/uuid": "^10.0.0",\n    "@vitejs/plugin-react": "^4.0.3",\n    "autoprefixer": "^10.4.14",\n    "postcss": "^8.4.27",\n    "tailwindcss": "^3.3.3",\n    "typescript": "^5.0.2",\n    "vite": "^4.4.5",\n    "vite-plugin-pwa": "^0.17.0"\n  }\n}
+{
+  "name": "iftaway-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Professional IFTA mileage and fuel tracking for truckers",
+  "keywords": [
+    "ifta",
+    "trucking",
+    "fuel",
+    "mileage",
+    "tracking",
+    "pwa"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:all": "npm run build && firebase deploy",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "firebase": "^12.0.0",
+    "heic2any": "0.0.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.7.2",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.2",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.0.3",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.27",
+    "tailwindcss": "^3.3.3",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5",
+    "vite-plugin-pwa": "^0.17.0"
+  }
+}
