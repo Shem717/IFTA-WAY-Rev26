@@ -101,3 +101,94 @@ Guidance:
   }
 });
 
+import * as admin from 'firebase-admin';
+admin.initializeApp();
+
+const db = admin.firestore();
+
+// A helper function to calculate distance between two odometer readings
+const calculateDistance = (odometer1: number, odometer2: number): number => {
+    return Math.abs(odometer2 - odometer1);
+};
+
+export const generateReport = onCall({
+    region: 'us-central1',
+    maxInstances: 10,
+    timeoutSeconds: 60
+}, async (req) => {
+    if (!req.auth) {
+        throw new HttpsError('unauthenticated', 'Must be authenticated to generate reports.');
+    }
+    const uid = req.auth.uid;
+
+    const { year, quarter } = req.data;
+    if (!year || !quarter || quarter < 1 || quarter > 4) {
+        throw new HttpsError('invalid-argument', 'Valid year and quarter are required.');
+    }
+
+    const startDate = new Date(year, (quarter - 1) * 3, 1);
+    const endDate = new Date(year, quarter * 3, 0, 23, 59, 59);
+
+    try {
+        const entriesSnapshot = await db.collection(`users/${uid}/fuel_entries`)
+            .where('dateTime', '>=', startDate.toISOString())
+            .where('dateTime', '<=', endDate.toISOString())
+            .where('isIgnored', '==', false)
+            .orderBy('dateTime', 'asc')
+            .get();
+
+        const entries = entriesSnapshot.docs.map(doc => doc.data());
+
+        if (entries.length < 2) {
+             return { message: "Not enough data to generate a report. At least two fuel entries are required for mileage calculation." };
+        }
+
+        const jurisdictionData: { [key: string]: { miles: number; fuel: number; cost: number } } = {};
+
+        const entriesByTruck = entries.reduce((acc, entry) => {
+            const truckNum = entry.truckNumber || 'default';
+            (acc[truckNum] = acc[truckNum] || []).push(entry);
+            return acc;
+        }, {} as Record<string, any[]>);
+
+        let totalMiles = 0;
+
+        Object.values(entriesByTruck).forEach(truckEntries => {
+            if (truckEntries.length > 1) {
+                for (let i = 0; i < truckEntries.length - 1; i++) {
+                    const miles = calculateDistance(truckEntries[i].odometer, truckEntries[i + 1].odometer);
+                    const state = truckEntries[i].state;
+                    if (!jurisdictionData[state]) jurisdictionData[state] = { miles: 0, fuel: 0, cost: 0 };
+                    jurisdictionData[state].miles += miles;
+                    totalMiles += miles;
+                }
+            }
+        });
+
+        entries.forEach(entry => {
+            const state = entry.state;
+            if (!jurisdictionData[state]) jurisdictionData[state] = { miles: 0, fuel: 0, cost: 0 };
+            jurisdictionData[state].fuel += entry.amount;
+            jurisdictionData[state].cost += entry.cost;
+        });
+
+        const reportRows = Object.entries(jurisdictionData).map(([state, data]) => ({
+            jurisdiction: state,
+            totalMiles: data.miles,
+            totalFuel: data.fuel,
+            totalCost: data.cost
+        }));
+
+        const totalDieselGallons = entries.filter(e => e.fuelType === 'diesel').reduce((sum, e) => sum + e.amount, 0);
+        const overallMPG = totalDieselGallons > 0 ? totalMiles / totalDieselGallons : 0;
+
+        return {
+            reportRows,
+            overallMPG,
+        };
+
+    } catch (error: any) {
+        console.error(`Report generation failed for user ${uid}:`, error);
+        throw new HttpsError('internal', 'Failed to generate report due to a server error.');
+    }
+});

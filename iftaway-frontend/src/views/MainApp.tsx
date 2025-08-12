@@ -1,6 +1,7 @@
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import { View, Theme, FuelEntry, Truck } from '../types';
 import apiService from '../services/apiService';
+import OfflineStorage from '../utils/offlineStorage';
 import { Header } from '../components/Header';
 import { BottomNav } from '../components/BottomNav';
 import { ActionSheet } from '../components/ActionSheet';
@@ -43,15 +44,36 @@ const MainApp: FC<MainAppProps> = ({ user, showToast, theme, setTheme, onSignOut
   const triggerRefresh = () => setRefreshTrigger((t) => t + 1);
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
+
+    const handleOnline = async () => {
+      setIsOffline(false);
+      showToast("You are back online.", "info");
+
+      if (OfflineStorage.hasOfflineData()) {
+        showToast("Syncing offline entries...", "info");
+        try {
+          const { success, failed } = await OfflineStorage.syncOfflineEntries(user.id, apiService.addEntry);
+          if (failed > 0) {
+            showToast(`${failed} entries could not be synced. Please try again later.`, "error");
+          }
+          if (success > 0) {
+            showToast(`${success} offline entries synced successfully!`, "success");
+            triggerRefresh();
+          }
+        } catch (error) {
+          showToast("An error occurred during sync.", "error");
+        }
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [user, showToast]);
 
   const fetchTrucks = useCallback(async () => {
     try {
